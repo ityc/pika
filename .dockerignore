@@ -14,7 +14,7 @@
 *~
 
 # 构建产物
-bin/
+bin/agents/
 web/dist/
 web/node_modules/
 
