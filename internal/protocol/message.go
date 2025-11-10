@@ -1,0 +1,243 @@
+package protocol
+
+import "encoding/json"
+
+// Message WebSocket消息结构
+type Message struct {
+	Type MessageType     `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
+// RegisterRequest 注册请求
+type RegisterRequest struct {
+	AgentInfo AgentInfo `json:"agentInfo"`
+	ApiKey    string    `json:"apiKey"`
+}
+
+// RegisterResponse 注册响应
+type RegisterResponse struct {
+	AgentID string `json:"agentId"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+}
+
+// AgentInfo 探针信息
+type AgentInfo struct {
+	ID       string `json:"id"`       // 探针唯一标识（持久化）
+	Name     string `json:"name"`     // 探针名称
+	Hostname string `json:"hostname"` // 主机名
+	OS       string `json:"os"`       // 操作系统
+	Arch     string `json:"arch"`     // 架构
+	Version  string `json:"version"`  // 版本号
+}
+
+// MetricsWrapper 指标数据包装
+type MetricsWrapper struct {
+	Type MetricType      `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
+type MessageType string
+
+// 控制消息
+const (
+	MessageTypeRegister    MessageType = "register"
+	MessageTypeRegisterAck MessageType = "register_ack"
+	MessageTypeRegisterErr MessageType = "register_error"
+	MessageTypeHeartbeat   MessageType = "heartbeat"
+	MessageTypeCommand     MessageType = "command"
+	MessageTypeCommandResp MessageType = "command_response"
+	// 指标消息
+	MessageTypeMetrics MessageType = "metrics"
+)
+
+type MetricType string
+
+// 消息类型常量
+const (
+	MetricTypeCPU         MetricType = "cpu"
+	MetricTypeMemory      MetricType = "memory"
+	MetricTypeDisk        MetricType = "disk"
+	MetricTypeDiskIO      MetricType = "disk_io"
+	MetricTypeNetwork     MetricType = "network"
+	MetricTypeLoad        MetricType = "load"
+	MetricTypeHost        MetricType = "host"
+	MetricTypeGPU         MetricType = "gpu"
+	MetricTypeTemperature MetricType = "temperature"
+)
+
+// CPUData CPU数据
+type CPUData struct {
+	// 静态信息(不常变化,但每次都发送)
+	LogicalCores  int    `json:"logicalCores"`
+	PhysicalCores int    `json:"physicalCores"`
+	ModelName     string `json:"modelName"`
+	// 动态信息
+	UsagePercent float64   `json:"usagePercent"`
+	PerCore      []float64 `json:"perCore,omitempty"`
+}
+
+// MemoryData 内存数据
+type MemoryData struct {
+	// 静态信息(不常变化,但每次都发送)
+	Total     uint64 `json:"total"`
+	SwapTotal uint64 `json:"swapTotal,omitempty"`
+	// 动态信息
+	Used         uint64  `json:"used"`
+	Free         uint64  `json:"free"`
+	Available    uint64  `json:"available"`
+	UsagePercent float64 `json:"usagePercent"`
+	Cached       uint64  `json:"cached,omitempty"`
+	Buffers      uint64  `json:"buffers,omitempty"`
+	SwapUsed     uint64  `json:"swapUsed,omitempty"`
+	SwapFree     uint64  `json:"swapFree,omitempty"`
+}
+
+// DiskData 磁盘数据
+type DiskData struct {
+	MountPoint   string  `json:"mountPoint"`
+	Device       string  `json:"device"`
+	Fstype       string  `json:"fstype"`
+	Total        uint64  `json:"total"`
+	Used         uint64  `json:"used"`
+	Free         uint64  `json:"free"`
+	UsagePercent float64 `json:"usagePercent"`
+}
+
+// DiskIOData 磁盘IO数据
+type DiskIOData struct {
+	Device         string `json:"device"`
+	ReadCount      uint64 `json:"readCount"`
+	WriteCount     uint64 `json:"writeCount"`
+	ReadBytes      uint64 `json:"readBytes"`
+	WriteBytes     uint64 `json:"writeBytes"`
+	ReadTime       uint64 `json:"readTime"`
+	WriteTime      uint64 `json:"writeTime"`
+	IoTime         uint64 `json:"ioTime"`
+	IopsInProgress uint64 `json:"iopsInProgress"`
+}
+
+// NetworkData 网络数据
+type NetworkData struct {
+	Interface      string   `json:"interface"`
+	MacAddress     string   `json:"macAddress,omitempty"`
+	Addrs          []string `json:"addrs,omitempty"`
+	BytesSentRate  uint64   `json:"bytesSentRate"`  // 发送速率(字节/秒)
+	BytesRecvRate  uint64   `json:"bytesRecvRate"`  // 接收速率(字节/秒)
+	BytesSentTotal uint64   `json:"bytesSentTotal"` // 累计发送字节数
+	BytesRecvTotal uint64   `json:"bytesRecvTotal"` // 累计接收字节数
+}
+
+// LoadData 系统负载数据
+type LoadData struct {
+	Load1  float64 `json:"load1"`
+	Load5  float64 `json:"load5"`
+	Load15 float64 `json:"load15"`
+}
+
+// HostInfoData 主机信息
+type HostInfoData struct {
+	Hostname             string `json:"hostname"`
+	Uptime               uint64 `json:"uptime"`
+	BootTime             uint64 `json:"bootTime"`
+	Procs                uint64 `json:"procs"`
+	OS                   string `json:"os"`
+	Platform             string `json:"platform"`
+	PlatformFamily       string `json:"platformFamily"`
+	PlatformVersion      string `json:"platformVersion"`
+	KernelVersion        string `json:"kernelVersion"`
+	KernelArch           string `json:"kernelArch"`
+	VirtualizationSystem string `json:"virtualizationSystem,omitempty"`
+	VirtualizationRole   string `json:"virtualizationRole,omitempty"`
+}
+
+// GPUData GPU数据
+type GPUData struct {
+	Index       int     `json:"index"`
+	Name        string  `json:"name"`
+	UUID        string  `json:"uuid,omitempty"`
+	Temperature float64 `json:"temperature,omitempty"`
+	Utilization float64 `json:"utilization,omitempty"`
+	MemoryTotal uint64  `json:"memoryTotal,omitempty"`
+	MemoryUsed  uint64  `json:"memoryUsed,omitempty"`
+	MemoryFree  uint64  `json:"memoryFree,omitempty"`
+	PowerUsage  float64 `json:"powerUsage,omitempty"`
+	FanSpeed    float64 `json:"fanSpeed,omitempty"`
+}
+
+// TemperatureData 温度数据
+type TemperatureData struct {
+	SensorKey   string  `json:"sensorKey"`
+	Temperature float64 `json:"temperature"`
+	High        float64 `json:"high,omitempty"`
+	Critical    float64 `json:"critical,omitempty"`
+}
+
+// CommandRequest 指令请求
+type CommandRequest struct {
+	ID   string `json:"id"`   // 指令ID
+	Type string `json:"type"` // 指令类型: vps_audit
+	Args string `json:"args,omitempty"`
+}
+
+// CommandResponse 指令响应
+type CommandResponse struct {
+	ID     string `json:"id"`               // 指令ID
+	Type   string `json:"type"`             // 指令类型
+	Status string `json:"status"`           // running/success/error
+	Error  string `json:"error,omitempty"`  // 错误信息
+	Result string `json:"result,omitempty"` // 结果数据(JSON字符串)
+}
+
+// VPSAuditResult VPS安全审计结果
+type VPSAuditResult struct {
+	// 系统信息
+	SystemInfo SystemInfo `json:"systemInfo"`
+	// 安全检查结果
+	SecurityChecks []SecurityCheck `json:"securityChecks"`
+	// 审计开始时间
+	StartTime int64 `json:"startTime"`
+	// 审计结束时间
+	EndTime int64 `json:"endTime"`
+	// 风险评分 (0-100)
+	RiskScore int `json:"riskScore"`
+	// 威胁等级: low/medium/high/critical
+	ThreatLevel string `json:"threatLevel"`
+	// 修复建议
+	Recommendations []string `json:"recommendations,omitempty"`
+}
+
+// SystemInfo 系统信息
+type SystemInfo struct {
+	Hostname      string `json:"hostname"`
+	OS            string `json:"os"`
+	KernelVersion string `json:"kernelVersion"`
+	Uptime        uint64 `json:"uptime"`
+	PublicIP      string `json:"publicIP,omitempty"`
+}
+
+// SecurityCheck 安全检查项
+type SecurityCheck struct {
+	Category string             `json:"category"` // 检查类别
+	Status   string             `json:"status"`   // pass/fail/warn/skip
+	Message  string             `json:"message"`  // 检查消息
+	Details  []SecurityCheckSub `json:"details,omitempty"`
+}
+
+// SecurityCheckSub 安全检查子项
+type SecurityCheckSub struct {
+	Name     string    `json:"name"`               // 子检查名称
+	Status   string    `json:"status"`             // pass/fail/warn/skip
+	Message  string    `json:"message"`            // 检查消息
+	Evidence *Evidence `json:"evidence,omitempty"` // 证据信息
+}
+
+// Evidence 安全事件证据
+type Evidence struct {
+	FileHash    string   `json:"fileHash,omitempty"`    // 文件SHA256哈希
+	ProcessTree []string `json:"processTree,omitempty"` // 进程树
+	FilePath    string   `json:"filePath,omitempty"`    // 文件路径
+	Timestamp   int64    `json:"timestamp,omitempty"`   // 时间戳(毫秒)
+	NetworkConn string   `json:"networkConn,omitempty"` // 网络连接信息
+	RiskLevel   string   `json:"riskLevel,omitempty"`   // 风险等级: low/medium/high
+}

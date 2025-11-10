@@ -1,0 +1,40 @@
+### Example user template template
+### Example user template
+
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
+
+# 日志文件
+logs/
+*.log
+
+# 数据文件
+data/
+
+# 编译产物
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 测试文件
+*.test
+*.out
+
+# Go 相关
+vendor/
+go.work
+go.work.sum
+
+# 临时文件
+*.swp
+*.swo
+*~
+.DS_Store
+
+config.yaml

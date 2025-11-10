@@ -1,0 +1,48 @@
+# Pika Agent 配置文件示例
+# 配置文件默认路径: ~/.pika/agent.yaml
+
+# 服务器配置
+server:
+  # 服务器地址（不需要指定协议路径，会自动拼接）
+  # 例如: http://localhost:18888 或 https://your-server.com
+  endpoint: http://localhost:18888
+
+  # API Key（必填，从服务端获取）
+  api_key: "your-api-key-here"
+
+# Agent 配置
+agent:
+  # Agent 名称（可选，默认使用主机名）
+  # 用于在服务端区分不同的探针
+  name: ""
+
+# 采集器配置
+collector:
+  # 数据采集间隔（秒）
+  # 建议: 5-60 秒，太短会增加服务器负载
+  interval: 5
+
+  # 心跳间隔（秒）
+  # 建议: 30-120 秒
+  heartbeat_interval: 30
+
+  # 网络采集排除的网卡列表（可选，支持正则表达式）
+  # 如果不配置，默认只排除回环地址（lo, lo0）
+  # 支持正则表达式匹配网卡名称
+  network_exclude:
+    - "^lo$"           # 排除 lo 接口（回环地址）
+    - "^lo0$"          # 排除 lo0 接口（回环地址）
+    - "^docker.*"      # 排除所有 docker 开头的接口
+    - "^veth.*"        # 排除所有 veth 开头的虚拟接口
+    - "^br-.*"         # 排除所有 br- 开头的网桥接口
+
+# 自动更新配置
+auto_update:
+  # 是否启用自动更新
+  # 启用后会定期检查服务端版本，有新版本时自动下载并更新
+  # 更新地址会自动从 server.endpoint 获取
+  enabled: false
+
+  # 检查更新间隔（小时）
+  # 建议: 6-24 小时
+  check_interval: 24

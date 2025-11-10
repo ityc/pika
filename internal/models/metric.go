@@ -1,0 +1,151 @@
+package models
+
+// CPUMetric CPU指标
+type CPUMetric struct {
+	ID            uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID       string  `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	UsagePercent  float64 `json:"usagePercent"`                                         // CPU使用率
+	LogicalCores  int     `json:"logicalCores"`                                         // 逻辑核心数
+	PhysicalCores int     `json:"physicalCores"`                                        // 物理核心数
+	ModelName     string  `json:"modelName"`                                            // CPU型号
+	Timestamp     int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (CPUMetric) TableName() string {
+	return "cpu_metrics"
+}
+
+// MemoryMetric 内存指标
+type MemoryMetric struct {
+	ID           uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID      string  `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	Total        uint64  `json:"total"`                                                // 总内存(字节)
+	Used         uint64  `json:"used"`                                                 // 已使用(字节)
+	Free         uint64  `json:"free"`                                                 // 空闲(字节)
+	UsagePercent float64 `json:"usagePercent"`                                         // 使用率
+	Timestamp    int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (MemoryMetric) TableName() string {
+	return "memory_metrics"
+}
+
+// DiskMetric 磁盘指标
+type DiskMetric struct {
+	ID           uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID      string  `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	MountPoint   string  `json:"mountPoint"`                                           // 挂载点
+	Total        uint64  `json:"total"`                                                // 总容量(字节)
+	Used         uint64  `json:"used"`                                                 // 已使用(字节)
+	Free         uint64  `json:"free"`                                                 // 空闲(字节)
+	UsagePercent float64 `json:"usagePercent"`                                         // 使用率
+	Timestamp    int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (DiskMetric) TableName() string {
+	return "disk_metrics"
+}
+
+// NetworkMetric 网络指标
+type NetworkMetric struct {
+	ID             uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID        string `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	Interface      string `json:"interface"`                                            // 网卡名称
+	BytesSentRate  uint64 `json:"bytesSentRate"`                                        // 发送速率(字节/秒)
+	BytesRecvRate  uint64 `json:"bytesRecvRate"`                                        // 接收速率(字节/秒)
+	BytesSentTotal uint64 `json:"bytesSentTotal"`                                       // 累计发送字节数
+	BytesRecvTotal uint64 `json:"bytesRecvTotal"`                                       // 累计接收字节数
+	Timestamp      int64  `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (NetworkMetric) TableName() string {
+	return "network_metrics"
+}
+
+// LoadMetric 系统负载指标
+type LoadMetric struct {
+	ID        uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID   string  `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	Load1     float64 `json:"load1"`                                                // 1分钟负载
+	Load5     float64 `json:"load5"`                                                // 5分钟负载
+	Load15    float64 `json:"load15"`                                               // 15分钟负载
+	Timestamp int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (LoadMetric) TableName() string {
+	return "load_metrics"
+}
+
+// DiskIOMetric 磁盘IO指标
+type DiskIOMetric struct {
+	ID             uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID        string `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	Device         string `json:"device"`                                               // 设备名称
+	ReadCount      uint64 `json:"readCount"`                                            // 读取次数
+	WriteCount     uint64 `json:"writeCount"`                                           // 写入次数
+	ReadBytes      uint64 `json:"readBytes"`                                            // 读取字节数
+	WriteBytes     uint64 `json:"writeBytes"`                                           // 写入字节数
+	ReadTime       uint64 `json:"readTime"`                                             // 读取时间(毫秒)
+	WriteTime      uint64 `json:"writeTime"`                                            // 写入时间(毫秒)
+	IoTime         uint64 `json:"ioTime"`                                               // IO时间(毫秒)
+	IopsInProgress uint64 `json:"iopsInProgress"`                                       // 正在进行的IO操作数
+	Timestamp      int64  `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (DiskIOMetric) TableName() string {
+	return "disk_io_metrics"
+}
+
+// GPUMetric GPU指标
+type GPUMetric struct {
+	ID               uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID          string  `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	Index            int     `json:"index"`                                                // GPU索引
+	Name             string  `json:"name"`                                                 // GPU名称
+	Utilization      float64 `json:"utilization"`                                          // GPU使用率(%)
+	MemoryTotal      uint64  `json:"memoryTotal"`                                          // 总显存(字节)
+	MemoryUsed       uint64  `json:"memoryUsed"`                                           // 已使用显存(字节)
+	MemoryFree       uint64  `json:"memoryFree"`                                           // 空闲显存(字节)
+	Temperature      float64 `json:"temperature"`                                          // 温度(℃)
+	PowerDraw        float64 `json:"powerDraw"`                                            // 功耗(瓦)
+	FanSpeed         float64 `json:"fanSpeed"`                                             // 风扇转速(%)
+	PerformanceState string  `json:"performanceState"`                                     // 性能状态
+	Timestamp        int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (GPUMetric) TableName() string {
+	return "gpu_metrics"
+}
+
+// TemperatureMetric 温度指标
+type TemperatureMetric struct {
+	ID          uint    `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID     string  `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	SensorKey   string  `json:"sensorKey"`                                            // 传感器标识
+	SensorLabel string  `json:"sensorLabel"`                                          // 传感器标签
+	Temperature float64 `json:"temperature"`                                          // 温度(℃)
+	Timestamp   int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (TemperatureMetric) TableName() string {
+	return "temperature_metrics"
+}
+
+// HostMetric 主机信息指标
+type HostMetric struct {
+	ID              uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+	AgentID         string `gorm:"index:idx_agent_time" json:"agentId"`                  // 探针ID
+	OS              string `json:"os"`                                                   // 操作系统
+	Platform        string `json:"platform"`                                             // 平台
+	PlatformVersion string `json:"platformVersion"`                                      // 平台版本
+	KernelVersion   string `json:"kernelVersion"`                                        // 内核版本
+	KernelArch      string `json:"kernelArch"`                                           // 内核架构
+	Uptime          uint64 `json:"uptime"`                                               // 运行时间(秒)
+	BootTime        uint64 `json:"bootTime"`                                             // 启动时间(Unix时间戳-秒)
+	Procs           uint64 `json:"procs"`                                                // 进程数
+	Timestamp       int64  `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
+}
+
+func (HostMetric) TableName() string {
+	return "host_metrics"
+}

@@ -1,0 +1,352 @@
+package internal
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/dushixiang/pika/internal/config"
+	"github.com/dushixiang/pika/internal/handler"
+	"github.com/dushixiang/pika/internal/models"
+	"github.com/dushixiang/pika/internal/service"
+	"github.com/dushixiang/pika/web"
+	"github.com/google/uuid"
+
+	"github.com/go-errors/errors"
+	"github.com/go-orz/orz"
+	"github.com/go-playground/validator/v10"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+)
+
+func Run(configPath string) {
+	err := orz.Quick(configPath, setup)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func setup(app *orz.App) error {
+	// 数据库迁移
+	if err := autoMigrate(app.GetDatabase()); err != nil {
+		return err
+	}
+
+	// 读取应用配置
+	var appConfig config.AppConfig
+	if err := app.GetConfig().App.Unmarshal(&appConfig); err != nil {
+		app.Logger().Error("读取配置失败", zap.Error(err))
+		return err
+	}
+
+	// 设置默认值
+	if appConfig.JWT.Secret == "" {
+		appConfig.JWT.Secret = uuid.NewString()
+		app.Logger().Warn("未配置JWT密钥，使用随机UUID")
+	}
+	if appConfig.JWT.ExpiresHours == 0 {
+		appConfig.JWT.ExpiresHours = 168 // 7天
+	}
+
+	// 初始化应用组件
+	components, err := InitializeApp(app.Logger(), app.GetDatabase(), &appConfig)
+	if err != nil {
+		return err
+	}
+
+	// 创建默认管理员用户
+	ctx := context.Background()
+	if err := createDefaultUser(ctx, components, app.Logger()); err != nil {
+		app.Logger().Error("创建默认用户失败", zap.Error(err))
+		// 不返回错误，因为可能用户已存在
+	}
+
+	// 启动WebSocket管理器
+	go components.WSManager.Run(ctx)
+
+	// 启动数据清理任务
+	go components.AgentService.StartCleanupTask(ctx)
+
+	// 启动指标监控任务（用于告警检测）
+	go startMetricsMonitoring(ctx, components, app.Logger())
+
+	// 设置API
+	setupApi(app, components)
+
+	return nil
+}
+
+func setupApi(app *orz.App, components *AppComponents) {
+	logger := app.Logger()
+	e := app.GetEcho()
+
+	e.Use(middleware.Recover())
+	e.Use(ErrorHandler(logger))
+
+	// 静态文件服务
+	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+		Skipper: func(c echo.Context) bool {
+			// 不处理接口
+			if strings.HasPrefix(c.Request().RequestURI, "/api") {
+				return true
+			}
+			// 不处理WebSocket
+			if strings.HasPrefix(c.Request().RequestURI, "/ws") {
+				return true
+			}
+			return false
+		},
+		Index:      "index.html",
+		HTML5:      true,
+		Browse:     false,
+		IgnoreBase: false,
+		Filesystem: http.FS(web.Assets()),
+	}))
+
+	customValidator := CustomValidator{Validator: validator.New()}
+	if err := customValidator.TransInit(); err != nil {
+		logger.Fatal("failed to init custom validator", zap.Error(err))
+	}
+	e.Validator = &customValidator
+	e.IPExtractor = echo.ExtractIPDirect()
+
+	// 公开接口（无需认证）
+	publicApi := e.Group("/api")
+	{
+		// 认证相关
+		publicApi.POST("/login", components.AccountHandler.Login)
+
+		// 探针信息（公开访问）- 用于公共展示页面
+		publicApi.GET("/agents", components.AgentHandler.GetAgents)
+		publicApi.GET("/agents/:id", components.AgentHandler.Get)
+		publicApi.GET("/agents/:id/metrics", components.AgentHandler.GetMetrics)
+		publicApi.GET("/agents/:id/metrics/latest", components.AgentHandler.GetLatestMetrics)
+
+		// Agent 版本和下载
+		publicApi.GET("/agent/version", components.AgentHandler.GetAgentVersion)
+		publicApi.GET("/agent/downloads/:filename", components.AgentHandler.DownloadAgent)
+	}
+
+	// WebSocket 路由（探针连接）
+	e.GET("/ws/agent", components.AgentHandler.HandleWebSocket)
+
+	// 管理员 API 路由（需要认证）
+	adminApi := e.Group("/api/admin")
+	adminApi.Use(JWTAuthMiddleware(components.AccountHandler))
+	{
+		// 账户相关
+		//adminApi.GET("/account/info", components.AccountHandler.Account)
+		adminApi.POST("/logout", components.AccountHandler.Logout)
+
+		// API密钥管理
+		adminApi.GET("/api-keys", components.ApiKeyHandler.Paging)
+		adminApi.POST("/api-keys", components.ApiKeyHandler.Create)
+		adminApi.GET("/api-keys/:id", components.ApiKeyHandler.Get)
+		adminApi.PUT("/api-keys/:id", components.ApiKeyHandler.Update)
+		adminApi.DELETE("/api-keys/:id", components.ApiKeyHandler.Delete)
+		adminApi.POST("/api-keys/:id/enable", components.ApiKeyHandler.Enable)
+		adminApi.POST("/api-keys/:id/disable", components.ApiKeyHandler.Disable)
+
+		// 探针管理（管理员功能）
+		adminApi.GET("/agents", components.AgentHandler.Paging)
+		adminApi.GET("/agents/statistics", components.AgentHandler.GetStatistics)
+		adminApi.GET("/agents/:id", components.AgentHandler.GetForAdmin)
+		adminApi.PUT("/agents/:id/name", components.AgentHandler.UpdateName)
+		adminApi.PUT("/agents/:id", components.AgentHandler.UpdateInfo)
+		adminApi.POST("/agents/:id/command", components.AgentHandler.SendCommand)
+
+		// VPS审计结果（管理员访问）
+		adminApi.GET("/agents/:id/audit/result", components.AgentHandler.GetAuditResult)
+		adminApi.GET("/agents/:id/audit/results", components.AgentHandler.ListAuditResults)
+
+		// 告警配置管理
+		adminApi.GET("/agents/:agentId/alert-configs", components.AlertHandler.ListAlertConfigsByAgent)
+		adminApi.POST("/alert-configs", components.AlertHandler.CreateAlertConfig)
+		adminApi.GET("/alert-configs/:id", components.AlertHandler.GetAlertConfig)
+		adminApi.PUT("/alert-configs/:id", components.AlertHandler.UpdateAlertConfig)
+		adminApi.DELETE("/alert-configs/:id", components.AlertHandler.DeleteAlertConfig)
+		adminApi.POST("/alert-configs/:id/test", components.AlertHandler.TestNotification)
+
+		// 告警记录查询
+		adminApi.GET("/alert-records", components.AlertHandler.ListAlertRecords)
+
+		// 用户管理
+		adminApi.GET("/users", components.UserHandler.Paging)
+		adminApi.POST("/users", components.UserHandler.Create)
+		adminApi.GET("/users/:id", components.UserHandler.Get)
+		adminApi.PUT("/users/:id", components.UserHandler.Update)
+		adminApi.DELETE("/users/:id", components.UserHandler.Delete)
+		adminApi.POST("/users/:id/password", components.UserHandler.ChangePassword)
+		adminApi.POST("/users/:id/reset-password", components.UserHandler.ResetPassword)
+		adminApi.POST("/users/:id/status", components.UserHandler.UpdateStatus)
+	}
+}
+
+func autoMigrate(database *gorm.DB) error {
+	// 自动迁移数据库表
+	return database.AutoMigrate(
+		&models.User{},
+		&models.Agent{},
+		&models.ApiKey{},
+		&models.CPUMetric{},
+		&models.MemoryMetric{},
+		&models.DiskMetric{},
+		&models.NetworkMetric{},
+		&models.LoadMetric{},
+		&models.DiskIOMetric{},
+		&models.GPUMetric{},
+		&models.TemperatureMetric{},
+		&models.HostMetric{},
+		&models.AuditResult{},
+		&models.AlertConfig{},
+		&models.AlertRecord{},
+	)
+}
+
+// createDefaultUser 创建默认管理员用户
+func createDefaultUser(ctx context.Context, components *AppComponents, logger *zap.Logger) error {
+	// 检查是否已存在管理员用户
+	_, total, err := components.UserService.ListUsers(ctx, 1, 1)
+	if err != nil {
+		return err
+	}
+
+	// 如果已有用户，则不创建
+	if total > 0 {
+		logger.Info("已存在用户，跳过创建默认用户")
+		return nil
+	}
+
+	// 创建默认管理员用户
+	defaultUser := &service.CreateUserRequest{
+		Username: "admin",
+		Password: "admin123",
+		Nickname: "管理员",
+	}
+
+	user, err := components.UserService.CreateUser(ctx, defaultUser)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("默认管理员用户创建成功",
+		zap.String("username", user.Username),
+		zap.String("password", "admin123"),
+		zap.String("提示", "请及时修改默认密码"))
+
+	return nil
+}
+
+func ErrorHandler(logger *zap.Logger) func(next echo.HandlerFunc) echo.HandlerFunc {
+	var a = func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if err := next(c); err != nil {
+				var he *echo.HTTPError
+				if errors.As(err, &he) {
+					return c.JSON(he.Code, orz.Map{
+						"code":    he.Code,
+						"message": err.Error(),
+					})
+				}
+
+				logger.Sugar().Errorf("[ERROR] %s", err.Error())
+
+				return c.JSON(500, orz.Map{
+					"code":    500,
+					"message": "Internal Server Error",
+				})
+			}
+			return nil
+		}
+	}
+	return a
+}
+
+// startMetricsMonitoring 启动指标监控任务（用于告警检测）
+func startMetricsMonitoring(ctx context.Context, components *AppComponents, logger *zap.Logger) {
+	logger.Info("启动指标监控任务")
+
+	ticker := time.NewTicker(30 * time.Second) // 每30秒检查一次
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("指标监控任务已停止")
+			return
+		case <-ticker.C:
+			// 检查所有在线探针的最新指标
+			agents, err := components.AgentService.ListOnlineAgents(ctx)
+			if err != nil {
+				logger.Error("获取在线探针失败", zap.Error(err))
+				continue
+			}
+
+			for _, agent := range agents {
+				// 获取最新指标
+				latest, err := components.AgentService.GetLatestMetrics(ctx, agent.ID)
+				if err != nil {
+					logger.Debug("获取探针最新指标失败", zap.String("agentId", agent.ID), zap.Error(err))
+					continue
+				}
+
+				// 提取 CPU、内存、磁盘使用率
+				var cpuUsage, memoryUsage, diskUsage float64
+
+				if latest.CPU != nil {
+					cpuUsage = latest.CPU.UsagePercent
+				}
+
+				if latest.Memory != nil {
+					memoryUsage = latest.Memory.UsagePercent
+				}
+
+				if latest.Disk != nil {
+					diskUsage = latest.Disk.AvgUsagePercent
+				}
+
+				// 检查告警规则
+				if err := components.AlertService.CheckMetrics(ctx, agent.ID, cpuUsage, memoryUsage, diskUsage); err != nil {
+					logger.Error("检查告警规则失败", zap.String("agentId", agent.ID), zap.Error(err))
+				}
+			}
+		}
+	}
+}
+
+// JWTAuthMiddleware JWT 认证中间件
+func JWTAuthMiddleware(accountHandler *handler.AccountHandler) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// 从 Authorization header 获取 token
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				return echo.NewHTTPError(http.StatusUnauthorized, "未提供认证令牌")
+			}
+
+			// 检查 Bearer 前缀
+			const bearerPrefix = "Bearer "
+			if len(authHeader) < len(bearerPrefix) || authHeader[:len(bearerPrefix)] != bearerPrefix {
+				return echo.NewHTTPError(http.StatusUnauthorized, "认证令牌格式错误")
+			}
+
+			tokenString := authHeader[len(bearerPrefix):]
+
+			// 验证 token
+			claims, err := accountHandler.ValidateToken(tokenString)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "认证令牌无效: "+err.Error())
+			}
+
+			// 将用户信息存入 context
+			c.Set("userID", claims.UserID)
+			c.Set("username", claims.Username)
+
+			return next(c)
+		}
+	}
+}

@@ -1,0 +1,22 @@
+Database:
+  Enabled: true
+  Type: postgres
+  Postgres:
+    Hostname: localhost
+    Port: 5432
+    Username: pika
+    Password: pika
+    Database: pika
+  ShowSql: false
+log:
+  Level: debug # 日志等级  debug,info,waring,error
+  Filename: ./logs/pika.log
+
+Server:
+  Addr: "0.0.0.0:8080"
+  IPExtractor: "X-Forwarded-For"
+
+App:
+  JWT:
+    Secret: "you_must_change_me" # 替换为任意 UUID 字符串
+    ExpiresHours: 168 # 7天

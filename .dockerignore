@@ -1,0 +1,47 @@
+# Git 相关
+.git
+.gitignore
+.gitattributes
+
+# GitHub Actions
+.github
+
+# IDE 相关
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# 构建产物
+bin/
+web/dist/
+web/node_modules/
+
+# 数据目录
+data/
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 测试文件
+*_test.go
+test/
+
+# 文档
+*.md
+!README.md
+docs/
+
+# 其他
+.DS_Store
+Thumbs.db
+.env
+.env.*
+docker-compose.yml

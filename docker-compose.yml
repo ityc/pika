@@ -1,0 +1,28 @@
+services:
+  postgresql:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pika
+      POSTGRES_USER: pika
+      POSTGRES_PASSWORD: pika
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U pika" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  pika:
+    image: dushixiang/pika:latest
+    environment:
+      DATABASE_POSTGRES_HOSTNAME: postgresql
+      DATABASE_POSTGRES_PORT: 5432
+      DATABASE_POSTGRES_USERNAME: pika
+      DATABASE_POSTGRES_PASSWORD: pika
+      DATABASE_POSTGRES_DATABASE: pika
+      SERVER_ADDR: "0.0.0.0:8080"
+      SERVER_IP_EXTRACTOR: "x-forwarded-for"
+      App_JWT_Secret: ""
+
