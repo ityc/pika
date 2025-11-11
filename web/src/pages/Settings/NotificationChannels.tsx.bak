@@ -1,0 +1,296 @@
+import { useState } from 'react';
+import { Button, Table, Space, App, Modal, Form, Input, Switch, Select, Tag } from 'antd';
+import { Plus, Pencil, Trash2, TestTube } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { NotificationChannel } from '../../types';
+import {
+    getNotificationChannels,
+    createNotificationChannel,
+    updateNotificationChannel,
+    deleteNotificationChannel,
+    testNotificationChannel,
+} from '../../api/notification-channel';
+import { getErrorMessage } from '../../lib/utils';
+
+const NotificationChannels = () => {
+    const [form] = Form.useForm();
+    const { message: messageApi, modal: modalApi } = App.useApp();
+    const queryClient = useQueryClient();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null);
+
+    // 获取通知渠道列表
+    const { data: channels = [], isLoading } = useQuery({
+        queryKey: ['notificationChannels'],
+        queryFn: getNotificationChannels,
+    });
+
+    // 创建 mutation
+    const createMutation = useMutation({
+        mutationFn: createNotificationChannel,
+        onSuccess: () => {
+            messageApi.success('创建成功');
+            queryClient.invalidateQueries({ queryKey: ['notificationChannels'] });
+            setIsModalOpen(false);
+            form.resetFields();
+        },
+        onError: (error: unknown) => {
+            messageApi.error(getErrorMessage(error, '创建失败'));
+        },
+    });
+
+    // 更新 mutation
+    const updateMutation = useMutation({
+        mutationFn: ({ id, channel }: { id: string; channel: NotificationChannel }) =>
+            updateNotificationChannel(id, channel),
+        onSuccess: () => {
+            messageApi.success('更新成功');
+            queryClient.invalidateQueries({ queryKey: ['notificationChannels'] });
+            setIsModalOpen(false);
+            setEditingChannel(null);
+            form.resetFields();
+        },
+        onError: (error: unknown) => {
+            messageApi.error(getErrorMessage(error, '更新失败'));
+        },
+    });
+
+    // 删除 mutation
+    const deleteMutation = useMutation({
+        mutationFn: deleteNotificationChannel,
+        onSuccess: () => {
+            messageApi.success('删除成功');
+            queryClient.invalidateQueries({ queryKey: ['notificationChannels'] });
+        },
+        onError: (error: unknown) => {
+            messageApi.error(getErrorMessage(error, '删除失败'));
+        },
+    });
+
+    // 测试 mutation
+    const testMutation = useMutation({
+        mutationFn: testNotificationChannel,
+        onSuccess: () => {
+            messageApi.success('测试通知已发送');
+        },
+        onError: (error: unknown) => {
+            messageApi.error(getErrorMessage(error, '测试失败'));
+        },
+    });
+
+    const handleCreate = () => {
+        setEditingChannel(null);
+        form.resetFields();
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (record: NotificationChannel) => {
+        setEditingChannel(record);
+        form.setFieldsValue(record);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = (id: string) => {
+        modalApi.confirm({
+            title: '确认删除',
+            content: '确定要删除这个通知渠道吗？',
+            onOk: () => deleteMutation.mutate(id),
+        });
+    };
+
+    const handleTest = (id: string) => {
+        testMutation.mutate(id);
+    };
+
+    const handleSubmit = async () => {
+        try {
+            const values = await form.validateFields();
+            if (editingChannel?.id) {
+                updateMutation.mutate({ id: editingChannel.id, channel: values });
+            } else {
+                createMutation.mutate(values);
+            }
+        } catch (error) {
+            // 表单验证失败
+        }
+    };
+
+    const getTypeLabel = (type: string) => {
+        const types = {
+            dingtalk: '钉钉',
+            wecom: '企业微信',
+            feishu: '飞书',
+            email: '邮件',
+            webhook: '自定义Webhook',
+        };
+        return types[type as keyof typeof types] || type;
+    };
+
+    const columns = [
+        {
+            title: '名称',
+            dataIndex: 'name',
+            key: 'name',
+        },
+        {
+            title: '类型',
+            dataIndex: 'type',
+            key: 'type',
+            render: (type: string) => getTypeLabel(type),
+        },
+        {
+            title: '状态',
+            dataIndex: 'enabled',
+            key: 'enabled',
+            render: (enabled: boolean) =>
+                enabled ? <Tag color="success">启用</Tag> : <Tag>禁用</Tag>,
+        },
+        {
+            title: '操作',
+            key: 'action',
+            render: (_: unknown, record: NotificationChannel) => (
+                <Space>
+                    <Button
+                        type="link"
+                        size="small"
+                        icon={<TestTube size={14} />}
+                        onClick={() => handleTest(record.id!)}
+                        loading={testMutation.isPending}
+                    >
+                        测试
+                    </Button>
+                    <Button type="link" size="small" icon={<Pencil size={14} />} onClick={() => handleEdit(record)}>
+                        编辑
+                    </Button>
+                    <Button
+                        type="link"
+                        size="small"
+                        danger
+                        icon={<Trash2 size={14} />}
+                        onClick={() => handleDelete(record.id!)}
+                    >
+                        删除
+                    </Button>
+                </Space>
+            ),
+        },
+    ];
+
+    return (
+        <div>
+            <div className="mb-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold">通知渠道管理</h2>
+                <Button type="primary" icon={<Plus size={16} />} onClick={handleCreate}>
+                    创建通知渠道
+                </Button>
+            </div>
+
+            <Table columns={columns} dataSource={channels} rowKey="id" loading={isLoading} />
+
+            <Modal
+                title={editingChannel ? '编辑通知渠道' : '创建通知渠道'}
+                open={isModalOpen}
+                onOk={handleSubmit}
+                onCancel={() => {
+                    setIsModalOpen(false);
+                    setEditingChannel(null);
+                    form.resetFields();
+                }}
+                confirmLoading={createMutation.isPending || updateMutation.isPending}
+                width={600}
+            >
+                <Form form={form} layout="vertical">
+                    <Form.Item label="渠道名称" name="name" rules={[{ required: true, message: '请输入渠道名称' }]}>
+                        <Input placeholder="例如：运维群通知" />
+                    </Form.Item>
+
+                    <Form.Item label="渠道类型" name="type" rules={[{ required: true, message: '请选择渠道类型' }]}>
+                        <Select
+                            placeholder="选择通知渠道类型"
+                            options={[
+                                { label: '钉钉', value: 'dingtalk' },
+                                { label: '企业微信', value: 'wecom' },
+                                { label: '飞书', value: 'feishu' },
+                                { label: '自定义Webhook', value: 'webhook' },
+                            ]}
+                        />
+                    </Form.Item>
+
+                    <Form.Item label="启用" name="enabled" valuePropName="checked" initialValue={true}>
+                        <Switch />
+                    </Form.Item>
+
+                    <Form.Item noStyle shouldUpdate={(prev, curr) => prev.type !== curr.type}>
+                        {({ getFieldValue }) => {
+                            const type = getFieldValue('type');
+                            if (type === 'dingtalk') {
+                                return (
+                                    <>
+                                        <Form.Item
+                                            label="Webhook URL"
+                                            name="dingTalkWebhook"
+                                            rules={[
+                                                { required: true, message: '请输入钉钉 Webhook URL' },
+                                                { type: 'url', message: '请输入有效的 URL' },
+                                            ]}
+                                        >
+                                            <Input placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
+                                        </Form.Item>
+                                        <Form.Item label="加签密钥（可选）" name="dingTalkSecret">
+                                            <Input.Password placeholder="SEC 开头的加签密钥" />
+                                        </Form.Item>
+                                    </>
+                                );
+                            }
+                            if (type === 'wecom') {
+                                return (
+                                    <Form.Item
+                                        label="Webhook URL"
+                                        name="weComWebhook"
+                                        rules={[
+                                            { required: true, message: '请输入企业微信 Webhook URL' },
+                                            { type: 'url', message: '请输入有效的 URL' },
+                                        ]}
+                                    >
+                                        <Input placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..." />
+                                    </Form.Item>
+                                );
+                            }
+                            if (type === 'feishu') {
+                                return (
+                                    <Form.Item
+                                        label="Webhook URL"
+                                        name="feishuWebhook"
+                                        rules={[
+                                            { required: true, message: '请输入飞书 Webhook URL' },
+                                            { type: 'url', message: '请输入有效的 URL' },
+                                        ]}
+                                    >
+                                        <Input placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." />
+                                    </Form.Item>
+                                );
+                            }
+                            if (type === 'webhook') {
+                                return (
+                                    <Form.Item
+                                        label="Webhook URL"
+                                        name="customWebhookUrl"
+                                        rules={[
+                                            { required: true, message: '请输入自定义 Webhook URL' },
+                                            { type: 'url', message: '请输入有效的 URL' },
+                                        ]}
+                                    >
+                                        <Input placeholder="https://your-server.com/webhook" />
+                                    </Form.Item>
+                                );
+                            }
+                            return null;
+                        }}
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+export default NotificationChannels;
