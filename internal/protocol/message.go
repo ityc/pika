@@ -209,6 +209,8 @@ type VPSAuditResult struct {
 	ThreatLevel string `json:"threatLevel"`
 	// 修复建议
 	Recommendations []string `json:"recommendations,omitempty"`
+	// 审计警告（权限不足、检查失败等非安全问题）
+	AuditWarnings []string `json:"auditWarnings,omitempty"`
 }
 
 // SystemInfo 系统信息
