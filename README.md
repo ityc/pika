@@ -10,7 +10,14 @@
 
 ## 简介
 
-Pika 是一个轻量级的探针监控系统，支持实时数据采集、存储和查询。系统采用 WebSocket 进行探针与服务端的通信，使用 PostgreSQL 存储时序数据，提供完整的 RESTful API 和用户管理功能。
+Pika 是一个轻量级的探针监控系统，支持实时数据采集、存储和查询。系统采用 WebSocket 进行探针与服务端的通信，使用 PostgreSQL 存储时序数据。
+
+
+## 截图
+
+![public1.png](screenshots/public1.png)
+![public2.png](screenshots/public2.png)
+![deploy.png](screenshots/deploy.png)
 
 ## 快速开始
 
