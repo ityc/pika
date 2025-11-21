@@ -137,6 +137,14 @@ var registerCmd = &cobra.Command{
 	Run:   registerAgent,
 }
 
+// infoCmd 信息命令
+var infoCmd = &cobra.Command{
+	Use:   "info",
+	Short: "显示配置信息",
+	Long:  `显示当前探针的配置信息`,
+	Run:   showInfo,
+}
+
 var (
 	serverEndpoint string
 	serverAPIKey   string
@@ -155,6 +163,7 @@ func init() {
 	// 添加子命令
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(registerCmd) // 注册命令放在前面，方便用户发现
+	rootCmd.AddCommand(infoCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(uninstallCmd)
@@ -483,13 +492,7 @@ func registerAgent(cmd *cobra.Command, args []string) {
 		Collector: config.CollectorConfig{
 			Interval:          5,
 			HeartbeatInterval: 30,
-			NetworkExclude: []string{
-				"^lo$",
-				"^lo0$",
-				"^docker.*",
-				"^veth.*",
-				"^br-.*",
-			},
+			NetworkExclude:    config.DefaultNetworkExcludePatterns(),
 		},
 		AutoUpdate: config.AutoUpdateConfig{
 			Enabled:       true,
@@ -542,4 +545,58 @@ func maskToken(token string) string {
 		return "****"
 	}
 	return token[:4] + "****" + token[len(token)-4:]
+}
+
+// showInfo 显示配置信息
+func showInfo(cmd *cobra.Command, args []string) {
+	// 加载配置
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		log.Fatalf("❌ 加载配置失败: %v", err)
+	}
+
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println("   📋 Pika Agent 配置信息")
+	fmt.Println("═══════════════════════════════════════")
+	fmt.Println()
+
+	// 基本信息
+	fmt.Println("🔧 基本配置:")
+	fmt.Printf("   配置文件路径: %s\n", configPath)
+	fmt.Printf("   探针名称: %s\n", cfg.Agent.Name)
+	fmt.Printf("   当前版本: %s\n", service.GetVersion())
+	fmt.Println()
+
+	// 服务端信息
+	fmt.Println("🌐 服务端配置:")
+	fmt.Printf("   服务端地址: %s\n", cfg.Server.Endpoint)
+	fmt.Printf("   API Token: %s\n", maskToken(cfg.Server.APIKey))
+	fmt.Println()
+
+	// 采集器配置
+	fmt.Println("📊 采集器配置:")
+	fmt.Printf("   采集间隔: %d 秒\n", cfg.Collector.Interval)
+	fmt.Printf("   心跳间隔: %d 秒\n", cfg.Collector.HeartbeatInterval)
+	if len(cfg.Collector.NetworkExclude) > 0 {
+		fmt.Printf("   网卡过滤规则: %v\n", cfg.Collector.NetworkExclude)
+	}
+	fmt.Println()
+
+	// 自动更新配置
+	fmt.Println("🔄 自动更新配置:")
+	if cfg.AutoUpdate.Enabled {
+		fmt.Printf("   状态: 已启用\n")
+		fmt.Printf("   检查间隔: %s\n", cfg.AutoUpdate.CheckInterval)
+	} else {
+		fmt.Printf("   状态: 已禁用\n")
+	}
+	fmt.Println()
+
+	// 系统信息
+	fmt.Println("💻 系统信息:")
+	fmt.Printf("   操作系统: %s\n", runtime.GOOS)
+	fmt.Printf("   系统架构: %s\n", runtime.GOARCH)
+	hostname, _ := os.Hostname()
+	fmt.Printf("   主机名: %s\n", hostname)
+	fmt.Println()
 }

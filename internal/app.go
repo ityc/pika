@@ -137,6 +137,7 @@ func setupApi(app *orz.App, components *AppComponents) {
 		publicApi.GET("/agents/:id", components.AgentHandler.Get)
 		publicApi.GET("/agents/:id/metrics", components.AgentHandler.GetMetrics)
 		publicApi.GET("/agents/:id/metrics/latest", components.AgentHandler.GetLatestMetrics)
+		publicApi.GET("/agents/:id/metrics/network-by-interface", components.AgentHandler.GetNetworkMetricsByInterface)
 
 		// Agent 版本和下载
 		publicApi.GET("/agent/version", components.AgentHandler.GetAgentVersion)
@@ -156,7 +157,7 @@ func setupApi(app *orz.App, components *AppComponents) {
 	adminApi.Use(JWTAuthMiddleware(components.AccountHandler))
 	{
 		// 账户相关
-		//adminApi.GET("/account/info", components.AccountHandler.Account)
+		adminApi.GET("/account/info", components.AccountHandler.GetCurrentUser)
 		adminApi.POST("/logout", components.AccountHandler.Logout)
 
 		// API密钥管理

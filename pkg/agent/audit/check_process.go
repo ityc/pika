@@ -175,13 +175,14 @@ func (pc *ProcessChecker) CheckSuspiciousEnvVars() protocol.SecurityCheck {
 				}
 				value := parts[1]
 
-				// 检查是否是合法的库路径
-				if pc.isLegitimateLibraryPath(value, name, exe) {
+				// 改用风险特征检测，只在真正可疑时报警
+				riskLevel, reason := pc.assessLibraryRiskWithReason(value, name, exe)
+
+				// 只报告中高风险的情况
+				if riskLevel == "low" || riskLevel == "none" {
 					continue
 				}
 
-				// 评估风险等级
-				riskLevel := pc.assessLibraryRisk(value)
 				status := StatusWarn
 				if riskLevel == "high" {
 					status = StatusFail
@@ -195,7 +196,7 @@ func (pc *ProcessChecker) CheckSuspiciousEnvVars() protocol.SecurityCheck {
 				check.Details = append(check.Details, protocol.SecurityCheckSub{
 					Name:     "suspicious_ld_env",
 					Status:   status,
-					Message:  fmt.Sprintf("进程 '%s'(PID: %d) 发现可疑环境变量: %s (风险等级: %s)", name, p.Pid, e, riskLevel),
+					Message:  fmt.Sprintf("进程 '%s'(PID: %d) 发现可疑环境变量: %s\n原因: %s", name, p.Pid, e, reason),
 					Evidence: pc.evidence.CollectProcessEvidence(p, riskLevel),
 				})
 				break
@@ -299,13 +300,35 @@ func (pc *ProcessChecker) isInDeletedWhitelist(name string) bool {
 
 // isLegitimateLibraryPath 检查是否是合法的库路径
 func (pc *ProcessChecker) isLegitimateLibraryPath(path, processName, processExe string) bool {
+	pathLower := strings.ToLower(path)
+	processNameLower := strings.ToLower(processName)
+	processExeLower := strings.ToLower(processExe)
+
+	// 现代应用打包系统 (Snap, Flatpak, AppImage)
+	// 这些系统会使用 LD_PRELOAD/LD_LIBRARY_PATH 加载隔离环境中的库
+	appPackagingSystems := []string{
+		"snap", "flatpak", "appimage",
+	}
+	for _, sys := range appPackagingSystems {
+		// 检查路径是否来自这些打包系统
+		if strings.Contains(pathLower, "/"+sys+"/") ||
+			strings.Contains(pathLower, "."+sys+"/") {
+			return true
+		}
+		// 检查进程是否由这些系统启动
+		if strings.Contains(processExeLower, "/"+sys+"/") ||
+			strings.Contains(processNameLower, sys) {
+			return true
+		}
+	}
+
 	// 开发工具(IDE)
 	devTools := []string{
 		"jetbrains", "vscode", "idea", "pycharm", "goland", "webstorm",
 		"clion", "rider", "datagrip", "androidstudio",
 	}
 	for _, tool := range devTools {
-		if strings.Contains(strings.ToLower(processExe), tool) {
+		if strings.Contains(processExeLower, tool) {
 			return true
 		}
 	}
@@ -313,7 +336,7 @@ func (pc *ProcessChecker) isLegitimateLibraryPath(path, processName, processExe 
 	// 数据库
 	databases := []string{"postgres", "mysql", "mariadb", "mongodb", "redis", "elasticsearch", "clickhouse"}
 	for _, db := range databases {
-		if strings.Contains(strings.ToLower(processName), db) {
+		if strings.Contains(processNameLower, db) {
 			return true
 		}
 	}
@@ -321,7 +344,7 @@ func (pc *ProcessChecker) isLegitimateLibraryPath(path, processName, processExe 
 	// 容器相关
 	containers := []string{"docker", "containerd", "kubelet", "podman", "cri-o", "k3s", "kubernetes"}
 	for _, container := range containers {
-		if strings.Contains(strings.ToLower(processName), container) {
+		if strings.Contains(processNameLower, container) {
 			return true
 		}
 	}
@@ -329,7 +352,7 @@ func (pc *ProcessChecker) isLegitimateLibraryPath(path, processName, processExe 
 	// Web 服务器
 	webServers := []string{"nginx", "apache", "httpd", "caddy", "traefik"}
 	for _, ws := range webServers {
-		if strings.Contains(strings.ToLower(processName), ws) {
+		if strings.Contains(processNameLower, ws) {
 			return true
 		}
 	}
@@ -341,8 +364,8 @@ func (pc *ProcessChecker) isLegitimateLibraryPath(path, processName, processExe 
 		"datadog", "newrelic", "prometheus", "grafana", // 监控工具
 	}
 	for _, tool := range scientificAndVirt {
-		if strings.Contains(strings.ToLower(processName), tool) ||
-			strings.Contains(strings.ToLower(processExe), tool) {
+		if strings.Contains(processNameLower, tool) ||
+			strings.Contains(processExeLower, tool) {
 			return true
 		}
 	}
@@ -361,20 +384,130 @@ func (pc *ProcessChecker) isLegitimateLibraryPath(path, processName, processExe 
 	return false
 }
 
-// assessLibraryRisk 评估库路径的风险等级
-func (pc *ProcessChecker) assessLibraryRisk(path string) string {
-	// 高危路径
-	highRiskPaths := []string{"/tmp/", "/dev/shm/", "/var/tmp/"}
-	for _, hrp := range highRiskPaths {
-		if strings.Contains(path, hrp) {
-			return "high"
+// assessLibraryRiskWithReason 基于风险特征评估库路径的风险等级，返回风险等级和原因
+func (pc *ProcessChecker) assessLibraryRiskWithReason(path, processName, processExe string) (string, string) {
+	pathLower := strings.ToLower(path)
+	processNameLower := strings.ToLower(processName)
+	processExeLower := strings.ToLower(processExe)
+
+	// 空路径
+	if strings.TrimSpace(path) == "" {
+		return "none", ""
+	}
+
+	// 1. 首先排除明显安全的情况
+
+	// 系统标准库路径 - 非常安全
+	systemLibPaths := []string{
+		"/usr/lib/", "/lib/", "/usr/local/lib/",
+		"/lib64/", "/usr/lib64/", "/usr/lib32/",
+	}
+	for _, sysPath := range systemLibPaths {
+		if strings.HasPrefix(path, sysPath) {
+			return "none", ""
 		}
 	}
 
-	// 隐藏文件
-	if strings.Contains(path, "/.") {
-		return "medium"
+	// 已知的应用打包系统 - 安全
+	appPackagingSystems := []string{
+		"/snap/", "/var/lib/snapd/snap/",
+		"/app/", "/var/lib/flatpak/",
+		"/.local/share/flatpak/",
+	}
+	for _, sys := range appPackagingSystems {
+		if strings.Contains(path, sys) {
+			return "none", ""
+		}
 	}
 
-	return "low"
+	// 常见的软件安装目录 - 相对安全
+	commonAppPaths := []string{
+		"/opt/", "/usr/share/", "/usr/local/share/",
+		"/Applications/", // macOS
+	}
+	for _, appPath := range commonAppPaths {
+		if strings.HasPrefix(path, appPath) {
+			return "none", ""
+		}
+	}
+
+	// 2. 检查高风险特征
+
+	// 临时目录中的库 - 高风险
+	highRiskPaths := []string{"/tmp/", "/dev/shm/", "/var/tmp/"}
+	for _, hrp := range highRiskPaths {
+		if strings.Contains(pathLower, hrp) {
+			return "high", fmt.Sprintf("库文件位于临时目录 %s，可能是恶意注入", hrp)
+		}
+	}
+
+	// 隐藏目录/文件 + 非标准路径 - 中风险
+	if strings.Contains(path, "/.") {
+		// 但如果是用户主目录下的隐藏配置目录，降低风险
+		userConfigPaths := []string{
+			"/.config/", "/.local/", "/.cache/",
+			"/.wine/", "/.steam/", "/.mozilla/",
+		}
+		isUserConfig := false
+		for _, userPath := range userConfigPaths {
+			if strings.Contains(pathLower, userPath) {
+				isUserConfig = true
+				break
+			}
+		}
+		if !isUserConfig {
+			return "medium", "库文件位于隐藏目录，且不是常见的用户配置目录"
+		}
+	}
+
+	// 3. 检查进程本身是否可疑
+
+	// 如果进程路径也在临时目录，风险升级
+	if processExe != "" {
+		for _, hrp := range highRiskPaths {
+			if strings.Contains(strings.ToLower(processExe), hrp) {
+				return "high", fmt.Sprintf("进程和库都位于临时目录，高度可疑")
+			}
+		}
+	}
+
+	// 4. 检查进程名是否可疑
+	suspiciousNames := []string{
+		"xmrig", "miner", "kthreaddk", "kthreaddi", ".sh",
+		"python -c", "perl -e", "bash -i", "/dev/tcp",
+	}
+	for _, susName := range suspiciousNames {
+		if strings.Contains(processNameLower, susName) || strings.Contains(processExeLower, susName) {
+			return "high", fmt.Sprintf("进程名称或路径包含可疑特征: %s", susName)
+		}
+	}
+
+	// 5. 其他情况 - 低风险或无风险
+
+	// 用户主目录下的应用 - 低风险（很多用户自己编译或安装的软件）
+	userHomePaths := []string{"/home/", "/root/", "/Users/"}
+	for _, homePath := range userHomePaths {
+		if strings.HasPrefix(path, homePath) {
+			// 但如果在主目录的明显的程序目录，就是安全的
+			safeUserPaths := []string{
+				"/bin/", "/apps/", "/software/", "/opt/",
+				"/go/", "/java/", "/python/", "/.jenv/", "/.pyenv/", "/.rbenv/",
+			}
+			for _, safePath := range safeUserPaths {
+				if strings.Contains(pathLower, safePath) {
+					return "none", ""
+				}
+			}
+			// 其他情况，低风险，不报警
+			return "low", ""
+		}
+	}
+
+	// 相对路径或当前目录 - 中等风险
+	if strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") || !strings.HasPrefix(path, "/") {
+		return "medium", "使用相对路径加载库，可能是本地开发或潜在风险"
+	}
+
+	// 默认：不在标准路径但也没有明显风险特征 - 低风险，不报警
+	return "low", ""
 }

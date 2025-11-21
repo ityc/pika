@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import React, {type ReactNode} from 'react';
 import {useEffect, useMemo, useState} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import {Activity, ArrowLeft, Cpu, HardDrive, Loader2, MemoryStick, Network, Server, Box, Thermometer, Zap} from 'lucide-react';
@@ -15,7 +15,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import {getAgent, getAgentLatestMetrics, getAgentMetrics, type GetAgentMetricsRequest} from '../../api/agent';
+import {getAgent, getAgentLatestMetrics, getAgentMetrics, type GetAgentMetricsRequest, getNetworkMetricsByInterface} from '../../api/agent';
 import type {
     Agent,
     AggregatedCPUMetric,
@@ -78,6 +78,15 @@ const timeRangeOptions = [
 ] as const;
 
 type TimeRange = typeof timeRangeOptions[number]['value'];
+
+// 网卡颜色配置（上行和下行使用不同的色调）
+const INTERFACE_COLORS = [
+    {upload: '#6FD598', download: '#2C70F6'}, // 绿/蓝
+    {upload: '#f59e0b', download: '#8b5cf6'}, // 橙/紫
+    {upload: '#ec4899', download: '#06b6d4'}, // 粉/青
+    {upload: '#10b981', download: '#f97316'}, // 翠绿/深橙
+    {upload: '#14b8a6', download: '#2563eb'}, // 青绿/深蓝
+];
 
 const LoadingSpinner = () => (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -329,6 +338,39 @@ const useAggregatedMetrics = (agentId: string | undefined, range: TimeRange) => 
     return metrics;
 };
 
+// 用于获取按网卡分组的网络指标
+const useNetworkMetricsByInterface = (agentId: string | undefined, range: TimeRange) => {
+    const [networkMetrics, setNetworkMetrics] = useState<AggregatedNetworkMetric[]>([]);
+
+    useEffect(() => {
+        if (!agentId) {
+            setNetworkMetrics([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchNetworkMetrics = async () => {
+            try {
+                const response = await getNetworkMetricsByInterface({agentId, range});
+                if (cancelled) return;
+                setNetworkMetrics(response.data.metrics || []);
+            } catch (error) {
+                console.error('Failed to load network metrics by interface:', error);
+            }
+        };
+
+        fetchNetworkMetrics();
+        const timer = setInterval(fetchNetworkMetrics, 30000);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+        };
+    }, [agentId, range]);
+
+    return networkMetrics;
+};
+
 type SnapshotCardData = {
     key: string;
     icon: typeof Cpu;
@@ -434,6 +476,7 @@ const ServerDetail = () => {
     const [selectedInterface, setSelectedInterface] = useState<string>('all');
     const {agent, latestMetrics, loading} = useAgentOverview(id);
     const metricsData = useAggregatedMetrics(id, timeRange);
+    const networkMetricsByInterface = useNetworkMetricsByInterface(id, timeRange);
 
     const cpuChartData = useMemo(
         () =>
@@ -459,14 +502,14 @@ const ServerDetail = () => {
         [metricsData.memory]
     );
 
-    // 获取所有可用的网卡列表
+    // 获取所有可用的网卡列表（从按网卡分组的数据中获取）
     const availableInterfaces = useMemo(() => {
         const interfaces = new Set<string>();
-        metricsData.network.forEach((item) => {
+        networkMetricsByInterface.forEach((item) => {
             interfaces.add(item.interface);
         });
         return Array.from(interfaces).sort();
-    }, [metricsData.network]);
+    }, [networkMetricsByInterface]);
 
     useEffect(() => {
         if (selectedInterface === 'all') {
@@ -478,37 +521,33 @@ const ServerDetail = () => {
     }, [availableInterfaces, selectedInterface]);
 
     const networkChartData = useMemo(() => {
-        const aggregated: Record<
-            string,
-            { time: string; upload: number; download: number }
-        > = {};
+        if (networkMetricsByInterface.length === 0) return [];
 
-        // 根据选择的网卡过滤数据
-        const filteredData = selectedInterface === 'all'
-            ? metricsData.network
-            : metricsData.network.filter(item => item.interface === selectedInterface);
-
-        filteredData.forEach((item) => {
+        // 按时间戳分组数据
+        const grouped = networkMetricsByInterface.reduce((acc, item) => {
             const time = new Date(item.timestamp).toLocaleTimeString('zh-CN', {
                 hour: '2-digit',
                 minute: '2-digit',
             });
 
-            if (!aggregated[time]) {
-                aggregated[time] = {time, upload: 0, download: 0};
+            if (!acc[time]) {
+                acc[time] = {time};
             }
 
-            // 聚合数据：使用平均速率（字节/秒）转换为 MB/s
-            aggregated[time].upload += item.maxSentRate / 1024 / 1024;
-            aggregated[time].download += item.maxRecvRate / 1024 / 1024;
-        });
+            // 根据选择的网卡过滤
+            if (selectedInterface === 'all' || item.interface === selectedInterface) {
+                const uploadKey = `${item.interface}_upload`;
+                const downloadKey = `${item.interface}_download`;
+                // 转换为 MB/s
+                acc[time][uploadKey] = Number((item.maxSentRate / 1024 / 1024).toFixed(2));
+                acc[time][downloadKey] = Number((item.maxRecvRate / 1024 / 1024).toFixed(2));
+            }
 
-        return Object.values(aggregated).map((item) => ({
-            ...item,
-            upload: Number(item.upload.toFixed(2)),
-            download: Number(item.download.toFixed(2)),
-        }));
-    }, [metricsData.network, selectedInterface]);
+            return acc;
+        }, {} as Record<string, any>);
+
+        return Object.values(grouped);
+    }, [networkMetricsByInterface, selectedInterface]);
 
     // Disk I/O 图表数据（汇总所有磁盘）
     const diskIOChartData = useMemo(() => {
@@ -962,26 +1001,38 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value} MB`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit=" MB"/>}/>
+                                            <Tooltip content={<CustomTooltip unit=" MB/s"/>}/>
                                             <Legend/>
-                                            <Line
-                                                type="monotone"
-                                                dataKey="upload"
-                                                name="上行"
-                                                stroke="#6FD598"
-                                                strokeWidth={2}
-                                                dot={false}
-                                                activeDot={{r: 3}}
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="download"
-                                                name="下行"
-                                                stroke="#2C70F6"
-                                                strokeWidth={2}
-                                                dot={false}
-                                                activeDot={{r: 3}}
-                                            />
+                                            {/* 动态渲染每个网卡的上行和下行曲线 */}
+                                            {availableInterfaces
+                                                .filter(iface => selectedInterface === 'all' || iface === selectedInterface)
+                                                .map((iface, index) => {
+                                                    const colorConfig = INTERFACE_COLORS[index % INTERFACE_COLORS.length];
+                                                    const uploadKey = `${iface}_upload`;
+                                                    const downloadKey = `${iface}_download`;
+                                                    return (
+                                                        <React.Fragment key={iface}>
+                                                            <Line
+                                                                type="monotone"
+                                                                dataKey={uploadKey}
+                                                                name={`${iface} 上行`}
+                                                                stroke={colorConfig.upload}
+                                                                strokeWidth={2}
+                                                                dot={false}
+                                                                activeDot={{r: 3}}
+                                                            />
+                                                            <Line
+                                                                type="monotone"
+                                                                dataKey={downloadKey}
+                                                                name={`${iface} 下行`}
+                                                                stroke={colorConfig.download}
+                                                                strokeWidth={2}
+                                                                dot={false}
+                                                                activeDot={{r: 3}}
+                                                            />
+                                                        </React.Fragment>
+                                                    );
+                                                })}
                                         </LineChart>
                                     </ResponsiveContainer>
                                 ) : (

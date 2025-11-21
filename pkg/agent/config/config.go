@@ -56,8 +56,14 @@ type CollectorConfig struct {
 	// 心跳间隔（秒）
 	HeartbeatInterval int `yaml:"heartbeat_interval"`
 
-	// 网络采集排除的网卡列表（支持正则表达式）
-	// 如果为空，默认只排除回环地址（lo, lo0）
+	// 网络采集包含的网卡列表（白名单，支持正则表达式）
+	// 如果配置了此项，则只采集匹配的网卡，忽略 NetworkExclude
+	// 例如: ["^eth0$", "^en0$", "^ens.*"]
+	NetworkInclude []string `yaml:"network_include"`
+
+	// 网络采集排除的网卡列表（黑名单，支持正则表达式）
+	// 仅当 NetworkInclude 为空时生效
+	// 如果为空，使用默认排除规则（虚拟网卡、回环地址等）
 	NetworkExclude []string `yaml:"network_exclude"`
 }
 
@@ -246,6 +252,56 @@ func (c *Config) Endpoint() string {
 	return endpoint
 }
 
+func DefaultNetworkExcludePatterns() []string {
+	return []string{
+		// 回环地址
+		"^lo$",
+		"^lo0$",
+		// Linux 虚拟接口
+		"^docker.*",  // Docker 网卡
+		"^veth.*",    // 虚拟以太网接口
+		"^br-.*",     // 网桥接口
+		"^virbr.*",   // KVM/libvirt 网桥
+		"^flannel.*", // Kubernetes Flannel
+		"^cni.*",     // Container Network Interface
+		// macOS 虚拟接口
+		"^anpi\\d+$",   // Apple Network Process Interface
+		"^ap\\d+$",     // Apple Wireless Access Point
+		"^awdl\\d+$",   // Apple Wireless Direct Link (AirDrop)
+		"^llw\\d+$",    // Low Latency WLAN
+		"^bridge\\d+$", // 桥接网络
+		"^gif\\d+$",    // Generic Tunnel Interface
+		"^stf\\d+$",    // 6to4 tunnel interface
+		"^utun\\d+$",   // User Tunnel (VPN)
+		"^vmenet\\d+$", // 虚拟机网络 (VMware/Parallels)
+		"^pktap\\d+$",  // Packet capture interface
+		"^ipsec\\d+$",  // IPSec interface
+		"^feth\\d+$",   // Fake ethernet interface
+		// Windows 虚拟接口
+		"^Loopback.*",
+		"^vEthernet.*",
+	}
+}
+
+// GetNetworkIncludePatterns 获取网络包含的正则表达式列表（白名单）
+func (c *Config) GetNetworkIncludePatterns() ([]*regexp.Regexp, error) {
+	patterns := c.Collector.NetworkInclude
+	if len(patterns) == 0 {
+		return nil, nil
+	}
+
+	var regexps []*regexp.Regexp
+	for _, pattern := range patterns {
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("编译网络包含规则 '%s' 失败: %w", pattern, err)
+		}
+		regexps = append(regexps, re)
+	}
+
+	return regexps, nil
+}
+
 // GetNetworkExcludePatterns 获取网络排除的正则表达式列表
 // 如果配置为空，返回默认排除规则（回环地址和常见虚拟网卡）
 func (c *Config) GetNetworkExcludePatterns() ([]*regexp.Regexp, error) {
@@ -253,13 +309,7 @@ func (c *Config) GetNetworkExcludePatterns() ([]*regexp.Regexp, error) {
 
 	// 如果没有配置，使用默认排除规则
 	if len(patterns) == 0 {
-		patterns = []string{
-			"^lo$",      // 回环地址
-			"^lo0$",     // 回环地址
-			"^docker.*", // Docker 网卡
-			"^veth.*",   // 虚拟以太网接口
-			"^br-.*",    // 网桥接口
-		}
+		patterns = DefaultNetworkExcludePatterns()
 	}
 
 	var regexps []*regexp.Regexp
@@ -275,14 +325,35 @@ func (c *Config) GetNetworkExcludePatterns() ([]*regexp.Regexp, error) {
 }
 
 // ShouldExcludeNetworkInterface 检查网卡是否应该被排除
+// 逻辑：
+// 1. 如果配置了 NetworkInclude（白名单），则只保留匹配白名单的网卡
+// 2. 如果没有配置 NetworkInclude，则使用 NetworkExclude（黑名单）规则
 func (c *Config) ShouldExcludeNetworkInterface(interfaceName string) bool {
-	patterns, err := c.GetNetworkExcludePatterns()
+	// 优先检查白名单
+	includePatterns, err := c.GetNetworkIncludePatterns()
+	if err != nil {
+		// 白名单编译失败，记录错误但继续使用黑名单逻辑
+		// 这里可以考虑记录日志
+	} else if len(includePatterns) > 0 {
+		// 配置了白名单，检查是否匹配
+		for _, pattern := range includePatterns {
+			if pattern.MatchString(interfaceName) {
+				// 匹配白名单，不排除
+				return false
+			}
+		}
+		// 不在白名单中，排除
+		return true
+	}
+
+	// 没有配置白名单，使用黑名单逻辑
+	excludePatterns, err := c.GetNetworkExcludePatterns()
 	if err != nil {
 		// 如果正则编译失败，使用默认规则
 		return interfaceName == "lo" || interfaceName == "lo0"
 	}
 
-	for _, pattern := range patterns {
+	for _, pattern := range excludePatterns {
 		if pattern.MatchString(interfaceName) {
 			return true
 		}

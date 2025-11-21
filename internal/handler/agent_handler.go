@@ -321,6 +321,54 @@ func (h *AgentHandler) GetMetrics(c echo.Context) error {
 	})
 }
 
+// GetNetworkMetricsByInterface 获取按网卡接口分组的网络指标
+func (h *AgentHandler) GetNetworkMetricsByInterface(c echo.Context) error {
+	agentID := c.Param("id")
+	rangeParam := c.QueryParam("range")
+
+	// 根据 range 参数自动计算时间范围
+	var start, end int64
+	end = time.Now().UnixMilli()
+
+	if rangeParam == "" {
+		rangeParam = "1h" // 默认1小时
+	}
+
+	switch rangeParam {
+	case "1m":
+		start = end - 1*60*1000
+	case "5m":
+		start = end - 5*60*1000
+	case "15m":
+		start = end - 15*60*1000
+	case "30m":
+		start = end - 30*60*1000
+	case "1h":
+		start = end - 60*60*1000
+	default:
+		return orz.NewError(400, "无效的时间范围，支持: 1m, 5m, 15m, 30m, 1h")
+	}
+
+	// 服务端自动计算最优聚合间隔
+	interval := service.CalculateInterval(start, end)
+
+	ctx := c.Request().Context()
+	metrics, err := h.agentService.GetNetworkMetricsByInterface(ctx, agentID, start, end, interval)
+	if err != nil {
+		return err
+	}
+
+	return orz.Ok(c, orz.Map{
+		"agentId":  agentID,
+		"type":     "network_by_interface",
+		"range":    rangeParam,
+		"start":    start,
+		"end":      end,
+		"interval": interval,
+		"metrics":  metrics,
+	})
+}
+
 // GetLatestMetrics 获取探针最新指标
 func (h *AgentHandler) GetLatestMetrics(c echo.Context) error {
 	id := c.Param("id")

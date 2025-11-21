@@ -416,6 +416,11 @@ func (s *AgentService) GetMetrics(ctx context.Context, agentID, metricType strin
 	}
 }
 
+// GetNetworkMetricsByInterface 获取按网卡接口分组的网络指标
+func (s *AgentService) GetNetworkMetricsByInterface(ctx context.Context, agentID string, start, end int64, interval int) (interface{}, error) {
+	return s.metricRepo.GetNetworkMetricsByInterface(ctx, agentID, start, end, interval)
+}
+
 // GetLatestMetrics 获取最新指标
 func (s *AgentService) GetLatestMetrics(ctx context.Context, agentID string) (*LatestMetrics, error) {
 	result := &LatestMetrics{}

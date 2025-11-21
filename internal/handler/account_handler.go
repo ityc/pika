@@ -138,3 +138,19 @@ func (r AccountHandler) Logout(c echo.Context) error {
 func (r AccountHandler) ValidateToken(tokenString string) (*service.JWTClaims, error) {
 	return r.accountService.ValidateToken(tokenString)
 }
+
+// GetCurrentUser 获取当前登录用户信息
+func (r AccountHandler) GetCurrentUser(c echo.Context) error {
+	// 从 context 中获取用户信息（由 JWT 中间件设置）
+	userID := c.Get("userID")
+	username := c.Get("username")
+
+	if userID == nil || username == nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "未登录")
+	}
+
+	return orz.Ok(c, orz.Map{
+		"userId":   userID.(string),
+		"username": username.(string),
+	})
+}

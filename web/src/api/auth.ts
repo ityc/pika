@@ -54,3 +54,13 @@ export const logout = () => {
     return post('/admin/logout');
 };
 
+// 获取当前用户信息
+export interface CurrentUser {
+    userId: string;
+    username: string;
+}
+
+export const getCurrentUser = () => {
+    return get<CurrentUser>('/admin/account/info');
+};
+

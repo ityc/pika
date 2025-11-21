@@ -1,4 +1,4 @@
-import {Activity, Github, Heart, Server} from 'lucide-react';
+import {Heart} from 'lucide-react';
 
 const PublicFooter = () => {
     const currentYear = new Date().getFullYear();
@@ -8,9 +8,20 @@ const PublicFooter = () => {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 {/* 底部版权信息 */}
                 <div className="py-6">
-                    <div className="flex flex-col items-center justify-between gap-3 text-xs text-slate-500 sm:flex-row">
+                    <div
+                        className="flex flex-col items-center justify-between gap-3 text-xs text-slate-500 sm:flex-row">
                         <div className="flex items-center gap-1">
-                            <span>© {currentYear} Pika Monitor</span>
+                            <span>© {currentYear}</span>
+                            {/* GitHub 链接 */}
+                            <a
+                                href="https://github.com/dushixiang/pika"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="查看 GitHub 仓库"
+                            >
+                                <div className={' text-slate-500 underline'}>Pika Monitor</div>
+                                {/*<img src={GithubSvg} className="h-4 w-4" alt="GitHub"/>*/}
+                            </a>
                             <span className="text-slate-300">·</span>
                             <span>保持洞察，稳定运行</span>
                         </div>

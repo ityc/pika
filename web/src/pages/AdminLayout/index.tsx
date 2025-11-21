@@ -166,7 +166,7 @@ const AdminLayout = () => {
                                     className="!bg-white/20"
                                 />
                                 <span className="text-xs font-medium">
-                                    {userInfo?.nickname || userInfo?.username || '访客'}
+                                    {userInfo?.username || '访客'}
                                 </span>
                             </button>
                         </Dropdown>

@@ -72,6 +72,35 @@ export const getAgentLatestMetrics = (agentId: string) => {
     return get<LatestMetrics>(`/agents/${agentId}/metrics/latest`);
 };
 
+export interface GetNetworkMetricsByInterfaceRequest {
+    agentId: string;
+    range?: '1m' | '5m' | '15m' | '30m' | '1h';
+}
+
+export interface NetworkMetricByInterface {
+    timestamp: number;
+    interface: string;
+    maxSentRate: number;
+    maxRecvRate: number;
+}
+
+export interface GetNetworkMetricsByInterfaceResponse {
+    agentId: string;
+    type: string;
+    range: string;
+    start: number;
+    end: number;
+    interval: number;
+    metrics: NetworkMetricByInterface[];
+}
+
+export const getNetworkMetricsByInterface = (params: GetNetworkMetricsByInterfaceRequest) => {
+    const {agentId, range = '1h'} = params;
+    const query = new URLSearchParams();
+    query.append('range', range);
+    return get<GetNetworkMetricsByInterfaceResponse>(`/agents/${agentId}/metrics/network-by-interface?${query.toString()}`);
+};
+
 // VPS 安全审计相关接口
 
 export interface SystemInfo {

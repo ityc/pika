@@ -54,7 +54,6 @@ type JWTClaims struct {
 // UserInfo 用户信息（简化版）
 type UserInfo struct {
 	Username string `json:"username"`
-	Nickname string `json:"nickname"`
 }
 
 // LoginResponse 登录响应
@@ -84,7 +83,6 @@ func (s *AccountService) Login(ctx context.Context, username, password string) (
 		ExpiresAt: expiresAt,
 		User: &UserInfo{
 			Username: username,
-			Nickname: username,
 		},
 	}, nil
 }
@@ -110,7 +108,6 @@ func (s *AccountService) LoginWithOIDC(ctx context.Context, code, state string) 
 		ExpiresAt: expiresAt,
 		User: &UserInfo{
 			Username: username,
-			Nickname: nickname,
 		},
 	}, nil
 }
@@ -249,7 +246,6 @@ func (s *AccountService) LoginWithGitHub(ctx context.Context, code, state string
 		ExpiresAt: expiresAt,
 		User: &UserInfo{
 			Username: username,
-			Nickname: nickname,
 		},
 	}, nil
 }

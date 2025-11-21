@@ -1,7 +1,6 @@
 // 用户相关（简化版，仅用于登录）
 export interface User {
     username: string;
-    nickname: string;
 }
 
 export interface LoginRequest {
