@@ -23,6 +23,9 @@ type MemoryMetric struct {
 	Used         uint64  `json:"used"`                                                 // 已使用(字节)
 	Free         uint64  `json:"free"`                                                 // 空闲(字节)
 	UsagePercent float64 `json:"usagePercent"`                                         // 使用率
+	SwapTotal    uint64  `json:"swapTotal"`                                            // 总交换空间(字节)
+	SwapUsed     uint64  `json:"swapUsed"`                                             // 已使用交换空间(字节)
+	SwapFree     uint64  `json:"swapFree"`                                             // 空闲交换空间(字节)
 	Timestamp    int64   `gorm:"index:idx_agent_time;index:idx_time" json:"timestamp"` // 时间戳（毫秒）
 }
 

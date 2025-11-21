@@ -158,6 +158,9 @@ func (s *AgentService) HandleMetricData(ctx context.Context, agentID string, met
 			Used:         memData.Used,
 			Free:         memData.Free,
 			UsagePercent: memData.UsagePercent,
+			SwapTotal:    memData.SwapTotal,
+			SwapUsed:     memData.SwapUsed,
+			SwapFree:     memData.SwapFree,
 			Timestamp:    now,
 		}
 		return s.metricRepo.SaveMemoryMetric(ctx, metric)

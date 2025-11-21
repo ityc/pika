@@ -81,16 +81,14 @@ type CPUData struct {
 
 // MemoryData 内存数据
 type MemoryData struct {
-	// 静态信息(不常变化,但每次都发送)
-	Total     uint64 `json:"total"`
-	SwapTotal uint64 `json:"swapTotal,omitempty"`
-	// 动态信息
+	Total        uint64  `json:"total"`
 	Used         uint64  `json:"used"`
 	Free         uint64  `json:"free"`
 	Available    uint64  `json:"available"`
 	UsagePercent float64 `json:"usagePercent"`
 	Cached       uint64  `json:"cached,omitempty"`
 	Buffers      uint64  `json:"buffers,omitempty"`
+	SwapTotal    uint64  `json:"swapTotal,omitempty"`
 	SwapUsed     uint64  `json:"swapUsed,omitempty"`
 	SwapFree     uint64  `json:"swapFree,omitempty"`
 }
