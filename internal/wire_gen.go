@@ -38,7 +38,7 @@ func InitializeApp(logger *zap.Logger, db *gorm.DB, cfg *config.AppConfig) (*App
 	alertService := service.NewAlertService(logger, db, propertyService, notifier)
 	alertHandler := handler.NewAlertHandler(logger, alertService)
 	propertyHandler := handler.NewPropertyHandler(logger, propertyService, notifier)
-	monitorHandler := handler.NewMonitorHandler(logger, monitorService)
+	monitorHandler := handler.NewMonitorHandler(logger, monitorService, agentService)
 	tamperHandler := handler.NewTamperHandler(logger, tamperService)
 	appComponents := &AppComponents{
 		AccountHandler:  accountHandler,

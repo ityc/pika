@@ -259,7 +259,7 @@ const MonitorList = () => {
                         {hasAgents && (
                             <Space wrap size={4}>
                                 <span className="text-xs text-gray-500">探针:</span>
-                                {record.agentIds.map((id) => (
+                                {record.agentNames?.map((id) => (
                                     <Tag key={id} color="blue">{id}</Tag>
                                 ))}
                             </Space>
@@ -267,7 +267,7 @@ const MonitorList = () => {
                         {hasTags && (
                             <Space wrap size={4}>
                                 <span className="text-xs text-gray-500">标签:</span>
-                                {record.tags.map((tag) => (
+                                {record.tags?.map((tag) => (
                                     <Tag key={tag} color="green">{tag}</Tag>
                                 ))}
                             </Space>

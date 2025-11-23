@@ -17,6 +17,7 @@ type MonitorTask struct {
 	Visibility       string                                         `gorm:"default:public" json:"visibility"`      // 可见性: public-匿名可见, private-登录可见
 	Interval         int                                            `json:"interval"`                              // 检测频率（秒），默认 60
 	AgentIds         datatypes.JSONSlice[string]                    `json:"agentIds"`                              // 指定的探针 ID 列表（JSON 数组）
+	AgentNames       []string                                       `gorm:"-" json:"agentNames"`                   // 指定的探针名称列表
 	Tags             datatypes.JSONSlice[string]                    `json:"tags"`                                  // 指定的标签列表（JSON 数组），拥有这些标签的探针都会执行此监控
 	HTTPConfig       datatypes.JSONType[protocol.HTTPMonitorConfig] `json:"httpConfig"`                            // HTTP 监控配置
 	TCPConfig        datatypes.JSONType[protocol.TCPMonitorConfig]  `json:"tcpConfig"`                             // TCP 监控配置

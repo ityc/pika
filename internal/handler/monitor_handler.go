@@ -11,43 +11,26 @@ import (
 type MonitorHandler struct {
 	logger         *zap.Logger
 	monitorService *service.MonitorService
+	agentService   *service.AgentService
 }
 
-func NewMonitorHandler(logger *zap.Logger, monitorService *service.MonitorService) *MonitorHandler {
+func NewMonitorHandler(logger *zap.Logger, monitorService *service.MonitorService, agentService *service.AgentService) *MonitorHandler {
 	return &MonitorHandler{
 		logger:         logger,
 		monitorService: monitorService,
+		agentService:   agentService,
 	}
 }
 
 func (h *MonitorHandler) List(c echo.Context) error {
 	keyword := c.QueryParam("keyword")
-	name := c.QueryParam("name")
-	target := c.QueryParam("target")
-	typeParam := c.QueryParam("type")
 	enabled := c.QueryParam("enabled")
 
-	pr := orz.GetPageRequest(c, "-updated_at", "name")
+	pr := orz.GetPageRequest(c, "name")
 
 	builder := orz.NewPageBuilder(h.monitorService.MonitorRepo).
-		PageRequest(pr)
-
-	// 如果有 keyword，则搜索 name（也可以搜索 target）
-	if keyword != "" {
-		// keyword 可以匹配 name 或 target
-		builder.Contains("name", keyword)
-		// 如果需要同时搜索 target，可以手动构建 OR 查询
-		// 这里简化处理，只搜索 name
-	} else {
-		// 否则使用独立的 name 和 target 搜索
-		builder.Contains("name", name).
-			Contains("target", target)
-	}
-
-	// 处理类型筛选
-	if typeParam != "" {
-		builder.Equal("type", typeParam)
-	}
+		PageRequest(pr).
+		Keyword([]string{"name", "target", "type"}, keyword)
 
 	// 处理启用状态筛选
 	if enabled == "true" {
@@ -60,6 +43,33 @@ func (h *MonitorHandler) List(c echo.Context) error {
 	page, err := builder.Execute(ctx)
 	if err != nil {
 		return err
+	}
+
+	var agentIds []string
+	for _, item := range page.Items {
+		if len(item.AgentIds) > 0 {
+			agentIds = append(agentIds, item.AgentIds...)
+		}
+	}
+	if len(agentIds) > 0 {
+		agents, err := h.agentService.AgentRepo.FindByIdIn(ctx, agentIds)
+		if err != nil {
+			return err
+		}
+
+		var agentNameMap = make(map[string]string)
+		for _, agent := range agents {
+			agentNameMap[agent.ID] = agent.Name
+		}
+
+		for i, monitor := range page.Items {
+			if len(monitor.AgentIds) == 0 {
+				continue
+			}
+			for _, agentId := range monitor.AgentIds {
+				page.Items[i].AgentNames = append(page.Items[i].AgentNames, agentNameMap[agentId])
+			}
+		}
 	}
 	return orz.Ok(c, page)
 }

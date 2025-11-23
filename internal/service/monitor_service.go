@@ -378,93 +378,6 @@ func (s *MonitorService) resolveTargetAgents(monitor models.MonitorTask, availab
 	return targetAgents
 }
 
-// BroadcastMonitorConfig 向所有在线探针广播监控配置
-func (s *MonitorService) BroadcastMonitorConfig(ctx context.Context) error {
-	// 获取所有启用的监控任务
-	var monitors []models.MonitorTask
-	if err := s.MonitorRepo.GetDB(ctx).
-		Where("enabled = ?", true).
-		Find(&monitors).Error; err != nil {
-		return err
-	}
-
-	// 如果没有启用的监控任务，直接返回（不需要发送任何配置）
-	if len(monitors) == 0 {
-		s.logger.Debug("没有启用的监控任务，跳过配置推送")
-		return nil
-	}
-
-	// 获取所有在线探针
-	agents, err := s.agentRepo.FindOnlineAgents(ctx)
-	if err != nil {
-		s.logger.Error("获取在线探针失败", zap.Error(err))
-		return err
-	}
-
-	// 按探针分组构建监控配置
-	agentMonitors := make(map[string][]models.MonitorTask)
-
-	for _, monitor := range monitors {
-		// 使用统一的方法计算目标探针
-		targetAgents := s.resolveTargetAgents(monitor, agents)
-
-		for _, agent := range targetAgents {
-			agentMonitors[agent.ID] = append(agentMonitors[agent.ID], monitor)
-		}
-	}
-
-	// 向每个有监控任务的探针发送对应的监控配置
-	for agentID, tasks := range agentMonitors {
-		items := make([]protocol.MonitorItem, 0, len(tasks))
-		for _, task := range tasks {
-			item := protocol.MonitorItem{
-				ID:     task.ID,
-				Type:   task.Type,
-				Target: task.Target,
-			}
-
-			if task.Type == "http" || task.Type == "https" {
-				var httpConfig protocol.HTTPMonitorConfig
-				if err := task.HTTPConfig.Scan(&httpConfig); err == nil {
-					item.HTTPConfig = &httpConfig
-				}
-			} else if task.Type == "tcp" {
-				var tcpConfig protocol.TCPMonitorConfig
-				if err := task.TCPConfig.Scan(&tcpConfig); err == nil {
-					item.TCPConfig = &tcpConfig
-				}
-			} else if task.Type == "icmp" || task.Type == "ping" {
-				var icmpConfig protocol.ICMPMonitorConfig
-				if err := task.ICMPConfig.Scan(&icmpConfig); err == nil {
-					item.ICMPConfig = &icmpConfig
-				}
-			}
-
-			items = append(items, item)
-		}
-
-		// 构建监控配置 payload
-		// Interval 字段不再使用（探针收到后立即检测一次），但保留字段兼容性
-		payload := protocol.MonitorConfigPayload{
-			Interval: 0,
-			Items:    items,
-		}
-
-		// 发送监控配置到指定探针
-		if err := s.sendMonitorConfigToAgent(agentID, payload); err != nil {
-			s.logger.Error("发送监控配置失败",
-				zap.String("agentID", agentID),
-				zap.Error(err))
-		} else {
-			s.logger.Debug("发送监控配置成功",
-				zap.String("agentID", agentID),
-				zap.Int("taskCount", len(items)))
-		}
-	}
-
-	return nil
-}
-
 // sendMonitorConfigToAgent 向指定探针发送监控配置（内部方法）
 func (s *MonitorService) sendMonitorConfigToAgent(agentID string, payload protocol.MonitorConfigPayload) error {
 	payloadData, err := json.Marshal(payload)
@@ -688,24 +601,38 @@ func (s *MonitorService) GetMonitorStatsByID(ctx context.Context, monitorID stri
 		return nil, err
 	}
 
+	// 获取探针列表
+	agents, err := s.agentRepo.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// 当前监控任务的关联的探针
+	targetAgents := s.resolveTargetAgents(monitor, agents)
+	var targetAgentsMap = make(map[string]string)
+	for _, agent := range targetAgents {
+		targetAgentsMap[agent.ID] = agent.Name
+	}
+
 	// 填充监控名称、探针名称和隐私设置
-	for i := range statsList {
-		statsList[i].MonitorName = monitor.Name
-		statsList[i].ShowTargetPublic = monitor.ShowTargetPublic
+	var filteredStatsList []models.MonitorStats
+	for _, stats := range statsList {
+		agentName, ok := targetAgentsMap[stats.AgentID]
+		if !ok {
+			continue
+		}
+
+		stats.MonitorName = monitor.Name
 
 		// 根据 ShowTargetPublic 字段决定是否隐藏 Target
 		if !monitor.ShowTargetPublic {
-			statsList[i].Target = "***"
+			stats.Target = "******"
 		}
 
-		// 查询探针名称
-		agent, err := s.agentRepo.FindById(ctx, statsList[i].AgentID)
-		if err == nil {
-			statsList[i].AgentName = agent.Name
-		}
+		stats.AgentName = agentName
+		filteredStatsList = append(filteredStatsList, stats)
 	}
 
-	return statsList, nil
+	return filteredStatsList, nil
 }
 
 // GetMonitorHistory 获取监控任务的历史响应时间数据

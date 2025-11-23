@@ -253,6 +253,7 @@ export interface MonitorTask {
     tcpConfig?: MonitorTcpConfig | null;
     icmpConfig?: MonitorIcmpConfig | null;
     agentIds?: string[];
+    agentNames?: string[];
     tags?: string[];       // 标签列表，拥有这些标签的探针都会执行此监控
     createdAt: number;
     updatedAt: number;
@@ -312,7 +313,6 @@ export interface MonitorStats {
     name: string;                 // 监控项名称
     type: string;
     target: string;
-    showTargetPublic: boolean;    // 在公开页面是否显示目标地址
     currentResponse: number;      // 当前响应时间(ms)
     avgResponse24h: number;       // 24小时平均响应时间(ms)
     uptime24h: number;            // 24小时在线率(百分比)
