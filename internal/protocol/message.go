@@ -321,6 +321,7 @@ type AssetInventory struct {
 	UserAssets    *UserAssets    `json:"userAssets,omitempty"`    // 用户资产
 	FileAssets    *FileAssets    `json:"fileAssets,omitempty"`    // 文件资产
 	KernelAssets  *KernelAssets  `json:"kernelAssets,omitempty"`  // 内核资产
+	LoginAssets   *LoginAssets   `json:"loginAssets,omitempty"`   // 登录资产
 }
 
 // AuditStatistics 审计统计摘要
@@ -329,6 +330,7 @@ type AuditStatistics struct {
 	ProcessStats *ProcessStatistics `json:"processStats,omitempty"` // 进程统计
 	UserStats    *UserStatistics    `json:"userStats,omitempty"`    // 用户统计
 	FileStats    *FileStatistics    `json:"fileStats,omitempty"`    // 文件统计
+	LoginStats   *LoginStatistics   `json:"loginStats,omitempty"`   // 登录统计
 }
 
 // ==================== 网络资产 ====================
@@ -424,10 +426,11 @@ type NetworkStatistics struct {
 
 // ProcessAssets 进程资产
 type ProcessAssets struct {
-	RunningProcesses   []ProcessInfo      `json:"runningProcesses,omitempty"`   // 所有运行进程(可选)
-	TopCPUProcesses    []ProcessInfo      `json:"topCpuProcesses,omitempty"`    // CPU占用TOP进程
-	TopMemoryProcesses []ProcessInfo      `json:"topMemoryProcesses,omitempty"` // 内存占用TOP进程
-	Statistics         *ProcessStatistics `json:"statistics,omitempty"`         // 统计信息
+	RunningProcesses    []ProcessInfo      `json:"runningProcesses,omitempty"`    // 所有运行进程(可选)
+	TopCPUProcesses     []ProcessInfo      `json:"topCpuProcesses,omitempty"`     // CPU占用TOP进程
+	TopMemoryProcesses  []ProcessInfo      `json:"topMemoryProcesses,omitempty"`  // 内存占用TOP进程
+	SuspiciousProcesses []ProcessInfo      `json:"suspiciousProcesses,omitempty"` // 可疑进程(如已删除exe)
+	Statistics          *ProcessStatistics `json:"statistics,omitempty"`          // 统计信息
 }
 
 // ProcessInfo 进程信息
@@ -443,6 +446,7 @@ type ProcessInfo struct {
 	MemoryMB   uint64  `json:"memoryMb"`           // 内存占用(MB)
 	Status     string  `json:"status,omitempty"`   // 状态
 	CreateTime int64   `json:"createTime"`         // 创建时间(毫秒)
+	ExeDeleted bool    `json:"exeDeleted"`         // 可执行文件是否已删除
 }
 
 // ProcessStatistics 进程统计
@@ -531,6 +535,7 @@ type FileAssets struct {
 	StartupScripts  []StartupScript  `json:"startupScripts,omitempty"`  // 启动脚本
 	RecentModified  []FileInfo       `json:"recentModified,omitempty"`  // 最近修改文件
 	LargeFiles      []FileInfo       `json:"largeFiles,omitempty"`      // 大文件
+	TmpExecutables  []FileInfo       `json:"tmpExecutables,omitempty"`  // 临时目录可执行文件
 	Statistics      *FileStatistics  `json:"statistics,omitempty"`      // 统计信息
 }
 
@@ -601,4 +606,24 @@ type SecurityModuleInfo struct {
 	SELinuxStatus   string `json:"selinuxStatus,omitempty"`   // SELinux状态
 	AppArmorStatus  string `json:"apparmorStatus,omitempty"`  // AppArmor状态
 	SecureBootState string `json:"secureBootState,omitempty"` // 安全启动状态
+}
+
+// ==================== 登录资产 ====================
+
+// LoginAssets 登录资产
+type LoginAssets struct {
+	SuccessfulLogins []LoginRecord    `json:"successfulLogins,omitempty"` // 成功登录记录
+	FailedLogins     []LoginRecord    `json:"failedLogins,omitempty"`     // 失败登录记录
+	CurrentSessions  []LoginSession   `json:"currentSessions,omitempty"`  // 当前登录会话
+	Statistics       *LoginStatistics `json:"statistics,omitempty"`       // 统计信息
+}
+
+// LoginStatistics 登录统计
+type LoginStatistics struct {
+	TotalLogins      int            `json:"totalLogins"`                // 总登录次数
+	FailedLogins     int            `json:"failedLogins"`               // 失败登录次数
+	CurrentSessions  int            `json:"currentSessions"`            // 当前会话数
+	UniqueIPs        map[string]int `json:"uniqueIPs,omitempty"`        // 唯一IP统计
+	UniqueUsers      map[string]int `json:"uniqueUsers,omitempty"`      // 唯一用户统计
+	HighFrequencyIPs map[string]int `json:"highFrequencyIPs,omitempty"` // 高频IP (登录次数>10)
 }

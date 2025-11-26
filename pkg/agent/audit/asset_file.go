@@ -44,6 +44,9 @@ func (fac *FileAssetsCollector) Collect() *protocol.FileAssets {
 	// 收集大文件
 	assets.LargeFiles = fac.collectLargeFiles()
 
+	// 收集临时目录可执行文件
+	assets.TmpExecutables = fac.collectTmpExecutables()
+
 	// 统计信息
 	assets.Statistics = fac.calculateStatistics(assets)
 
@@ -297,6 +300,45 @@ func (fac *FileAssetsCollector) collectLargeFiles() []protocol.FileInfo {
 		})
 
 		if len(files) >= 20 {
+			break
+		}
+	}
+
+	return files
+}
+
+// collectTmpExecutables 收集临时目录下的可执行文件
+func (fac *FileAssetsCollector) collectTmpExecutables() []protocol.FileInfo {
+	var files []protocol.FileInfo
+
+	searchDirs := []string{"/tmp", "/dev/shm", "/var/tmp"}
+
+	for _, dir := range searchDirs {
+		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+
+			// 跳过符号链接
+			if info.Mode()&os.ModeSymlink != 0 {
+				return nil
+			}
+
+			// 检查是否可执行 (rwx)
+			if info.Mode()&0111 != 0 {
+				fileInfo := fac.convertToFileInfo(path, info)
+				files = append(files, fileInfo)
+			}
+
+			// 限制每个目录的数量，防止遍历太多
+			if len(files) >= 50 {
+				return filepath.SkipDir
+			}
+
+			return nil
+		})
+
+		if len(files) >= 50 {
 			break
 		}
 	}

@@ -2,6 +2,7 @@ package audit
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/dushixiang/pika/internal/protocol"
 	"github.com/shirou/gopsutil/v4/process"
@@ -33,10 +34,16 @@ func (pac *ProcessAssetsCollector) Collect() *protocol.ProcessAssets {
 
 	// 收集所有进程信息
 	var allProcesses []protocol.ProcessInfo
+	var suspiciousProcesses []protocol.ProcessInfo
+
 	for _, p := range procs {
 		procInfo := pac.convertToProcessInfo(p)
 		if procInfo != nil {
 			allProcesses = append(allProcesses, *procInfo)
+			// 检查是否可疑
+			if procInfo.ExeDeleted {
+				suspiciousProcesses = append(suspiciousProcesses, *procInfo)
+			}
 		}
 	}
 
@@ -45,6 +52,9 @@ func (pac *ProcessAssetsCollector) Collect() *protocol.ProcessAssets {
 
 	// TOP 内存进程
 	assets.TopMemoryProcesses = pac.getTopProcesses(allProcesses, "memory", 15)
+
+	// 可疑进程
+	assets.SuspiciousProcesses = suspiciousProcesses
 
 	// 可选:完整进程列表 (配置控制)
 	// 暂时不包含完整列表,避免数据过大
@@ -79,6 +89,17 @@ func (pac *ProcessAssetsCollector) convertToProcessInfo(p *process.Process) *pro
 		memoryMB = memInfo.RSS / 1024 / 1024
 	}
 
+	// 检查 Exe 是否已删除
+	exeDeleted := false
+	if exe != "" {
+		// Linux 下已删除的 exe 通常以 " (deleted)" 结尾
+		// 注意：gopsutil 可能会处理这个，但为了保险起见我们自己检查
+		if strings.HasSuffix(exe, " (deleted)") || strings.Contains(exe, "; rm ") {
+			exeDeleted = true
+		}
+		// TODO: 可以增加更多检查逻辑，如 exe 指向 /tmp 或 /dev/shm
+	}
+
 	return &protocol.ProcessInfo{
 		PID:        p.Pid,
 		Name:       name,
@@ -91,6 +112,7 @@ func (pac *ProcessAssetsCollector) convertToProcessInfo(p *process.Process) *pro
 		MemoryMB:   memoryMB,
 		Status:     status[0], // 取第一个状态
 		CreateTime: createTime,
+		ExeDeleted: exeDeleted,
 	}
 }
 

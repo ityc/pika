@@ -137,10 +137,63 @@ export interface ListeningPort {
     isPublic: boolean;
 }
 
+export interface NetworkConnection {
+    protocol: string;
+    localAddr: string;
+    localPort: number;
+    remoteAddr: string;
+    remotePort: number;
+    state: string;
+    processPid?: number;
+    processName?: string;
+}
+
+export interface NetworkInterface {
+    name: string;
+    macAddress: string;
+    addresses?: string[];
+    mtu: number;
+    isUp: boolean;
+    flags?: string[];
+}
+
+export interface RouteEntry {
+    destination: string;
+    gateway: string;
+    genmask: string;
+    interface: string;
+    metric: number;
+}
+
+export interface FirewallRule {
+    chain: string;
+    target: string;
+    protocol?: string;
+    source?: string;
+    dest?: string;
+    port?: string;
+}
+
+export interface FirewallInfo {
+    type: string;
+    status: string;
+    rules?: FirewallRule[];
+}
+
+export interface ARPEntry {
+    ipAddress: string;
+    macAddress: string;
+    interface: string;
+}
+
 export interface NetworkAssets {
     listeningPorts?: ListeningPort[];
-    connections?: any[];
-    interfaces?: any[];
+    connections?: NetworkConnection[];
+    interfaces?: NetworkInterface[];
+    routingTable?: RouteEntry[];
+    firewallRules?: FirewallInfo;
+    dnsServers?: string[];
+    arpTable?: ARPEntry[];
 }
 
 export interface ProcessInfo {
@@ -152,11 +205,14 @@ export interface ProcessInfo {
     cpuPercent: number;
     memPercent: number;
     memoryMb: number;
+    exeDeleted?: boolean;
 }
 
 export interface ProcessAssets {
+    runningProcesses?: ProcessInfo[];
     topCpuProcesses?: ProcessInfo[];
     topMemoryProcesses?: ProcessInfo[];
+    suspiciousProcesses?: ProcessInfo[];
 }
 
 export interface UserInfo {
@@ -170,25 +226,109 @@ export interface UserInfo {
     hasPassword: boolean;
 }
 
+export interface LoginRecord {
+    username: string;
+    ip?: string;
+    terminal: string;
+    timestamp: number;
+    status?: string;
+}
+
+export interface LoginSession {
+    username: string;
+    terminal: string;
+    ip: string;
+    loginTime: number;
+    idleTime: number;
+}
+
+export interface SSHKeyInfo {
+    username: string;
+    keyType: string;
+    fingerprint: string;
+    comment?: string;
+    filePath: string;
+    addedTime?: number;
+}
+
+export interface SudoUserInfo {
+    username: string;
+    rules?: string;
+    noPasswd: boolean;
+}
+
 export interface UserAssets {
     systemUsers?: UserInfo[];
-    loginHistory?: any[];
-    sshKeys?: any[];
-    sudoUsers?: any[];
+    loginHistory?: LoginRecord[];
+    currentLogins?: LoginSession[];
+    sshKeys?: SSHKeyInfo[];
+    sudoUsers?: SudoUserInfo[];
+}
+
+export interface LoginAssets {
+    successfulLogins?: LoginRecord[];
+    failedLogins?: LoginRecord[];
+    currentSessions?: LoginSession[];
+}
+
+export interface FileInfo {
+    path: string;
+    size: number;
+    modTime: number;
+    permissions?: string;
+    owner?: string;
+    group?: string;
+    isExecutable: boolean;
+}
+
+export interface CronJob {
+    user: string;
+    schedule: string;
+    command: string;
+    filePath?: string;
+}
+
+export interface SystemdService {
+    name: string;
+    state?: string;
+    enabled: boolean;
+    execStart?: string;
+    description?: string;
+    unitFile?: string;
+}
+
+export interface StartupScript {
+    type: string;
+    path: string;
+    name: string;
+    enabled: boolean;
 }
 
 export interface FileAssets {
-    cronJobs?: any[];
-    systemdServices?: any[];
-    startupScripts?: any[];
-    recentModified?: any[];
-    largeFiles?: any[];
+    cronJobs?: CronJob[];
+    systemdServices?: SystemdService[];
+    startupScripts?: StartupScript[];
+    recentModified?: FileInfo[];
+    largeFiles?: FileInfo[];
+    tmpExecutables?: FileInfo[];
+}
+
+export interface KernelModule {
+    name: string;
+    size: number;
+    usedBy: number;
+}
+
+export interface SecurityModuleInfo {
+    selinuxStatus?: string;
+    apparmorStatus?: string;
+    secureBootState?: string;
 }
 
 export interface KernelAssets {
-    loadedModules?: any[];
+    loadedModules?: KernelModule[];
     kernelParameters?: Record<string, string>;
-    securityModules?: any;
+    securityModules?: SecurityModuleInfo;
 }
 
 export interface AssetInventory {
@@ -197,6 +337,7 @@ export interface AssetInventory {
     userAssets?: UserAssets;
     fileAssets?: FileAssets;
     kernelAssets?: KernelAssets;
+    loginAssets?: LoginAssets;
 }
 
 export interface AuditStatistics {

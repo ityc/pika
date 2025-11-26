@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/dushixiang/pika/internal/protocol"
@@ -29,6 +30,7 @@ type Auditor struct {
 	userAssetsCollector    *UserAssetsCollector
 	fileAssetsCollector    *FileAssetsCollector
 	kernelAssetsCollector  *KernelAssetsCollector
+	loginAssetsCollector   *LoginAssetsCollector
 }
 
 // NewAuditor 创建审计器
@@ -52,6 +54,7 @@ func NewAuditor(config *Config) *Auditor {
 		userAssetsCollector:    NewUserAssetsCollector(config, executor),
 		fileAssetsCollector:    NewFileAssetsCollector(config, executor),
 		kernelAssetsCollector:  NewKernelAssetsCollector(config, executor),
+		loginAssetsCollector:   NewLoginAssetsCollector(config, executor),
 	}
 }
 
@@ -136,13 +139,22 @@ func (a *Auditor) collectAssets() *protocol.AssetInventory {
 		{"内核资产", func() {
 			inventory.KernelAssets = a.kernelAssetsCollector.Collect()
 		}},
+		{"登录资产", func() {
+			inventory.LoginAssets = a.loginAssetsCollector.Collect()
+		}},
 	}
 
-	// 串行执行(避免资源竞争,实际可以优化为并发)
+	// 并发执行
+	var wg sync.WaitGroup
 	for _, task := range tasks {
-		globalLogger.Debug("收集%s...", task.name)
-		task.fn()
+		wg.Add(1)
+		go func(t assetTask) {
+			defer wg.Done()
+			globalLogger.Debug("收集%s...", t.name)
+			t.fn()
+		}(task)
 	}
+	wg.Wait()
 
 	return inventory
 }
@@ -165,6 +177,10 @@ func (a *Auditor) calculateStatistics(inventory *protocol.AssetInventory) *proto
 
 	if inventory.FileAssets != nil {
 		stats.FileStats = inventory.FileAssets.Statistics
+	}
+
+	if inventory.LoginAssets != nil {
+		stats.LoginStats = inventory.LoginAssets.Statistics
 	}
 
 	return stats
