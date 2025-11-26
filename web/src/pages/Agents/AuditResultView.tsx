@@ -127,15 +127,6 @@ const AuditResultView = ({result}: AuditResultViewProps) => {
         // 6. SSH Configuration Security Issues
         const sshConfig = result.assetInventory.userAssets?.sshConfig;
         if (sshConfig) {
-            // 允许root密码登录
-            if (sshConfig.permitRootLogin === 'yes' && sshConfig.passwordAuthentication) {
-                risks.push({
-                    level: 'high',
-                    title: 'SSH允许root密码登录',
-                    description: 'SSH配置允许root用户使用密码登录，存在被暴力破解的风险，建议设置为 prohibit-password 或 no'
-                });
-            }
-
             // 允许空密码登录
             if (sshConfig.permitEmptyPasswords) {
                 risks.push({
@@ -145,21 +136,30 @@ const AuditResultView = ({result}: AuditResultViewProps) => {
                 });
             }
 
-            // 仅使用密码认证，没有启用公钥认证
-            if (sshConfig.passwordAuthentication && !sshConfig.pubkeyAuthentication) {
-                risks.push({
-                    level: 'medium',
-                    title: 'SSH仅启用密码认证',
-                    description: 'SSH配置仅启用密码认证，建议启用公钥认证以提高安全性'
-                });
-            }
-
             // 使用旧协议
             if (sshConfig.protocol && sshConfig.protocol.includes('1')) {
                 risks.push({
                     level: 'high',
                     title: 'SSH使用不安全的协议版本',
                     description: 'SSH配置使用Protocol 1，存在安全漏洞，应仅使用Protocol 2'
+                });
+            }
+
+            // 允许root密码登录
+            if (sshConfig.permitRootLogin === 'yes' && sshConfig.passwordAuthentication) {
+                risks.push({
+                    level: 'medium',
+                    title: 'SSH允许root密码登录',
+                    description: 'SSH配置允许root用户使用密码登录，建议配合fail2ban等防护措施，或设置为 prohibit-password'
+                });
+            }
+
+            // 仅使用密码认证，没有启用公钥认证
+            if (sshConfig.passwordAuthentication && !sshConfig.pubkeyAuthentication) {
+                risks.push({
+                    level: 'low',
+                    title: 'SSH仅启用密码认证',
+                    description: 'SSH配置仅启用密码认证，建议同时启用公钥认证以提高安全性'
                 });
             }
         }
