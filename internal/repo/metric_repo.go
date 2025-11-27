@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/dushixiang/pika/internal/models"
 	"gorm.io/gorm"
@@ -380,7 +381,7 @@ func (r *MetricRepo) GetLatestMemoryMetric(ctx context.Context, agentID string) 
 // GetLatestDiskMetrics 获取最新的磁盘指标（所有挂载点）
 func (r *MetricRepo) GetLatestDiskMetrics(ctx context.Context, agentID string) ([]models.DiskMetric, error) {
 	// 先获取最新时间戳
-	var latestTimestamp int64
+	var latestTimestamp sql.NullInt64
 	err := r.db.WithContext(ctx).
 		Model(&models.DiskMetric{}).
 		Where("agent_id = ?", agentID).
@@ -391,10 +392,14 @@ func (r *MetricRepo) GetLatestDiskMetrics(ctx context.Context, agentID string) (
 		return nil, err
 	}
 
+	if !latestTimestamp.Valid {
+		return []models.DiskMetric{}, nil
+	}
+
 	// 获取该时间戳的所有磁盘数据
 	var metrics []models.DiskMetric
 	err = r.db.WithContext(ctx).
-		Where("agent_id = ? AND timestamp = ?", agentID, latestTimestamp).
+		Where("agent_id = ? AND timestamp = ?", agentID, latestTimestamp.Int64).
 		Find(&metrics).Error
 
 	return metrics, err
@@ -403,7 +408,7 @@ func (r *MetricRepo) GetLatestDiskMetrics(ctx context.Context, agentID string) (
 // GetLatestNetworkMetrics 获取最新的网络指标（所有网卡）
 func (r *MetricRepo) GetLatestNetworkMetrics(ctx context.Context, agentID string) ([]models.NetworkMetric, error) {
 	// 先获取最新时间戳
-	var latestTimestamp int64
+	var latestTimestamp sql.NullInt64
 	err := r.db.WithContext(ctx).
 		Model(&models.NetworkMetric{}).
 		Where("agent_id = ?", agentID).
@@ -414,10 +419,14 @@ func (r *MetricRepo) GetLatestNetworkMetrics(ctx context.Context, agentID string
 		return nil, err
 	}
 
+	if !latestTimestamp.Valid {
+		return []models.NetworkMetric{}, nil
+	}
+
 	// 获取该时间戳的所有网络数据
 	var metrics []models.NetworkMetric
 	err = r.db.WithContext(ctx).
-		Where("agent_id = ? AND timestamp = ?", agentID, latestTimestamp).
+		Where("agent_id = ? AND timestamp = ?", agentID, latestTimestamp.Int64).
 		Find(&metrics).Error
 
 	return metrics, err
