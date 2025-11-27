@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/dushixiang/pika/internal/models"
 	"github.com/dushixiang/pika/internal/repo"
+	"github.com/go-orz/toolkit/syncx"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -23,8 +23,7 @@ type AlertService struct {
 	logger          *zap.Logger
 
 	// 告警状态缓存（内存中维护）
-	states map[string]*models.AlertState
-	mu     sync.RWMutex
+	states *syncx.SafeMap[string, *models.AlertState]
 }
 
 func NewAlertService(logger *zap.Logger, db *gorm.DB, propertyService *PropertyService, notifier *Notifier) *AlertService {
@@ -35,7 +34,7 @@ func NewAlertService(logger *zap.Logger, db *gorm.DB, propertyService *PropertyS
 		propertyService: propertyService,
 		notifier:        notifier,
 		logger:          logger,
-		states:          make(map[string]*models.AlertState),
+		states:          syncx.NewSafeMap[string, *models.AlertState](),
 	}
 }
 
@@ -57,13 +56,11 @@ func (s *AlertService) UpdateAlertConfig(ctx context.Context, config *models.Ale
 // DeleteAlertConfig 删除告警配置
 func (s *AlertService) DeleteAlertConfig(ctx context.Context, id string) error {
 	// 清理该配置相关的状态
-	s.mu.Lock()
-	for key, state := range s.states {
-		if state.ConfigID == id {
-			delete(s.states, key)
+	for key := range s.states.Keys() {
+		if state, ok := s.states.Get(key); ok && state.ConfigID == id {
+			s.states.Delete(key)
 		}
 	}
-	s.mu.Unlock()
 
 	return s.alertRepo.DeleteAlertConfig(ctx, id)
 }
@@ -133,15 +130,13 @@ func (s *AlertService) checkAlert(ctx context.Context, config *models.AlertConfi
 
 	var shouldFire, shouldResolve bool
 
-	s.mu.Lock()
-	state, exists := s.states[stateKey]
+	state, exists := s.states.Get(stateKey)
 	if !exists {
 		state = &models.AlertState{
 			AgentID:   agent.ID,
 			ConfigID:  config.ID,
 			AlertType: alertType,
 		}
-		s.states[stateKey] = state
 	}
 
 	// 按探针维度更新最新阈值/持续时间，支持配置变更
@@ -169,7 +164,9 @@ func (s *AlertService) checkAlert(ctx context.Context, config *models.AlertConfi
 		}
 		state.StartTime = 0
 	}
-	s.mu.Unlock()
+
+	// 更新状态
+	s.states.Set(stateKey, state)
 
 	if shouldFire {
 		s.fireAlert(ctx, config, agent, state)
@@ -182,9 +179,7 @@ func (s *AlertService) checkAlert(ctx context.Context, config *models.AlertConfi
 
 // fireAlert 触发告警
 func (s *AlertService) fireAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, state *models.AlertState) {
-	s.mu.RLock()
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	s.logger.Info("触发告警",
 		zap.String("agentId", agent.ID),
@@ -213,18 +208,18 @@ func (s *AlertService) fireAlert(ctx context.Context, config *models.AlertConfig
 	err := s.alertRepo.CreateAlertRecord(ctx, record)
 	if err != nil {
 		s.logger.Error("创建告警记录失败", zap.Error(err))
-		s.mu.Lock()
 		state.IsFiring = false
 		state.LastRecordID = 0
-		s.mu.Unlock()
+		stateKey := fmt.Sprintf("%s:%s:%s", agent.ID, config.ID, state.AlertType)
+		s.states.Set(stateKey, state)
 		return
 	}
 
 	// 更新状态
-	s.mu.Lock()
 	state.IsFiring = true
 	state.LastRecordID = record.ID
-	s.mu.Unlock()
+	stateKey := fmt.Sprintf("%s:%s:%s", agent.ID, config.ID, state.AlertType)
+	s.states.Set(stateKey, state)
 
 	// 发送通知
 	go func() {
@@ -250,9 +245,7 @@ func (s *AlertService) fireAlert(ctx context.Context, config *models.AlertConfig
 
 // resolveAlert 恢复告警
 func (s *AlertService) resolveAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, state *models.AlertState) {
-	s.mu.RLock()
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	s.logger.Info("告警恢复",
 		zap.String("agentId", agent.ID),
@@ -299,10 +292,10 @@ func (s *AlertService) resolveAlert(ctx context.Context, config *models.AlertCon
 	}
 
 	// 更新状态
-	s.mu.Lock()
 	state.IsFiring = false
 	state.LastRecordID = 0
-	s.mu.Unlock()
+	stateKey := fmt.Sprintf("%s:%s:%s", agent.ID, config.ID, state.AlertType)
+	s.states.Set(stateKey, state)
 }
 
 // buildAlertMessage 构建告警消息
@@ -431,15 +424,13 @@ func (s *AlertService) checkCertAlert(ctx context.Context, config *models.AlertC
 
 	shouldFire := false
 
-	s.mu.Lock()
-	state, exists := s.states[stateKey]
+	state, exists := s.states.Get(stateKey)
 	if !exists {
 		state = &models.AlertState{
 			AgentID:   agent.ID,
 			ConfigID:  config.ID,
 			AlertType: "cert",
 		}
-		s.states[stateKey] = state
 	}
 	state.AgentID = agent.ID
 	state.ConfigID = config.ID
@@ -453,7 +444,9 @@ func (s *AlertService) checkCertAlert(ctx context.Context, config *models.AlertC
 		shouldFire = true
 		state.IsFiring = true
 	}
-	s.mu.Unlock()
+
+	// 更新状态
+	s.states.Set(stateKey, state)
 
 	if !shouldFire {
 		return
@@ -484,17 +477,15 @@ func (s *AlertService) checkCertAlert(ctx context.Context, config *models.AlertC
 	err := s.alertRepo.CreateAlertRecord(ctx, record)
 	if err != nil {
 		s.logger.Error("创建证书告警记录失败", zap.Error(err))
-		s.mu.Lock()
 		state.IsFiring = false
 		state.LastRecordID = 0
-		s.mu.Unlock()
+		s.states.Set(stateKey, state)
 		return
 	}
 
-	s.mu.Lock()
 	state.IsFiring = true
 	state.LastRecordID = record.ID
-	s.mu.Unlock()
+	s.states.Set(stateKey, state)
 
 	// 发送通知
 	go func(rec *models.AlertRecord) {
@@ -521,14 +512,11 @@ func (s *AlertService) checkCertAlert(ctx context.Context, config *models.AlertC
 func (s *AlertService) resolveCertAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, monitor *models.MonitorMetric, certDaysLeft float64) {
 	stateKey := fmt.Sprintf("%s:%s:cert:%s", agent.ID, config.ID, monitor.MonitorId)
 
-	s.mu.RLock()
-	state, exists := s.states[stateKey]
+	state, exists := s.states.Get(stateKey)
 	if !exists {
-		s.mu.RUnlock()
 		return
 	}
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	if !stateSnapshot.IsFiring {
 		return
@@ -576,10 +564,9 @@ func (s *AlertService) resolveCertAlert(ctx context.Context, config *models.Aler
 		}
 	}
 
-	s.mu.Lock()
 	state.IsFiring = false
 	state.LastRecordID = 0
-	s.mu.Unlock()
+	s.states.Set(stateKey, state)
 }
 
 // calculateCertLevel 计算证书告警级别
@@ -613,15 +600,13 @@ func (s *AlertService) checkServiceDownAlerts(ctx context.Context, config *model
 
 		var shouldFire, shouldResolve bool
 
-		s.mu.Lock()
-		state, exists := s.states[stateKey]
+		state, exists := s.states.Get(stateKey)
 		if !exists {
 			state = &models.AlertState{
 				AgentID:   agent.ID,
 				ConfigID:  config.ID,
 				AlertType: "service",
 			}
-			s.states[stateKey] = state
 		}
 		state.AgentID = agent.ID
 		state.ConfigID = config.ID
@@ -645,7 +630,9 @@ func (s *AlertService) checkServiceDownAlerts(ctx context.Context, config *model
 			}
 			state.StartTime = 0
 		}
-		s.mu.Unlock()
+
+		// 更新状态
+		s.states.Set(stateKey, state)
 
 		if shouldFire {
 			s.fireServiceDownAlert(ctx, config, &agent, monitor, state, now)
@@ -661,9 +648,7 @@ func (s *AlertService) checkServiceDownAlerts(ctx context.Context, config *model
 
 // fireServiceDownAlert 触发服务下线告警
 func (s *AlertService) fireServiceDownAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, monitor *models.MonitorMetric, state *models.AlertState, now int64) {
-	s.mu.RLock()
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	s.logger.Info("触发服务下线告警",
 		zap.String("agentId", agent.ID),
@@ -690,17 +675,17 @@ func (s *AlertService) fireServiceDownAlert(ctx context.Context, config *models.
 	err := s.alertRepo.CreateAlertRecord(ctx, record)
 	if err != nil {
 		s.logger.Error("创建服务下线告警记录失败", zap.Error(err))
-		s.mu.Lock()
 		state.IsFiring = false
 		state.LastRecordID = 0
-		s.mu.Unlock()
+		stateKey := fmt.Sprintf("%s:%s:service:%s", agent.ID, config.ID, monitor.MonitorId)
+		s.states.Set(stateKey, state)
 		return
 	}
 
-	s.mu.Lock()
 	state.IsFiring = true
 	state.LastRecordID = record.ID
-	s.mu.Unlock()
+	stateKey := fmt.Sprintf("%s:%s:service:%s", agent.ID, config.ID, monitor.MonitorId)
+	s.states.Set(stateKey, state)
 
 	// 发送通知
 	go func() {
@@ -725,9 +710,7 @@ func (s *AlertService) fireServiceDownAlert(ctx context.Context, config *models.
 
 // resolveServiceDownAlert 恢复服务下线告警
 func (s *AlertService) resolveServiceDownAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, monitor *models.MonitorMetric, state *models.AlertState) {
-	s.mu.RLock()
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	s.logger.Info("服务下线告警恢复",
 		zap.String("agentId", agent.ID),
@@ -769,10 +752,10 @@ func (s *AlertService) resolveServiceDownAlert(ctx context.Context, config *mode
 		}
 	}
 
-	s.mu.Lock()
 	state.IsFiring = false
 	state.LastRecordID = 0
-	s.mu.Unlock()
+	stateKey := fmt.Sprintf("%s:%s:service:%s", agent.ID, config.ID, monitor.MonitorId)
+	s.states.Set(stateKey, state)
 }
 
 // checkAgentOfflineAlerts 检查探针离线告警
@@ -789,15 +772,13 @@ func (s *AlertService) checkAgentOfflineAlerts(ctx context.Context, config *mode
 		var shouldFire, shouldResolve bool
 		offlineSeconds := (now - agent.LastSeenAt) / 1000
 
-		s.mu.Lock()
-		state, exists := s.states[stateKey]
+		state, exists := s.states.Get(stateKey)
 		if !exists {
 			state = &models.AlertState{
 				AgentID:   agent.ID,
 				ConfigID:  config.ID,
 				AlertType: "agent_offline",
 			}
-			s.states[stateKey] = state
 		}
 
 		state.AgentID = agent.ID
@@ -818,7 +799,9 @@ func (s *AlertService) checkAgentOfflineAlerts(ctx context.Context, config *mode
 				shouldResolve = true
 			}
 		}
-		s.mu.Unlock()
+
+		// 更新状态
+		s.states.Set(stateKey, state)
 
 		if shouldFire {
 			s.fireAgentOfflineAlert(ctx, config, &agent, state, offlineSeconds, now)
@@ -834,9 +817,7 @@ func (s *AlertService) checkAgentOfflineAlerts(ctx context.Context, config *mode
 
 // fireAgentOfflineAlert 触发探针离线告警
 func (s *AlertService) fireAgentOfflineAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, state *models.AlertState, offlineSeconds int64, now int64) {
-	s.mu.RLock()
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	s.logger.Info("触发探针离线告警",
 		zap.String("agentId", agent.ID),
@@ -863,17 +844,17 @@ func (s *AlertService) fireAgentOfflineAlert(ctx context.Context, config *models
 	err := s.alertRepo.CreateAlertRecord(ctx, record)
 	if err != nil {
 		s.logger.Error("创建探针离线告警记录失败", zap.Error(err))
-		s.mu.Lock()
 		state.IsFiring = false
 		state.LastRecordID = 0
-		s.mu.Unlock()
+		stateKey := fmt.Sprintf("%s:%s:agent_offline:%s", agent.ID, config.ID, agent.ID)
+		s.states.Set(stateKey, state)
 		return
 	}
 
-	s.mu.Lock()
 	state.IsFiring = true
 	state.LastRecordID = record.ID
-	s.mu.Unlock()
+	stateKey := fmt.Sprintf("%s:%s:agent_offline:%s", agent.ID, config.ID, agent.ID)
+	s.states.Set(stateKey, state)
 
 	// 发送通知
 	go func() {
@@ -898,9 +879,7 @@ func (s *AlertService) fireAgentOfflineAlert(ctx context.Context, config *models
 
 // resolveAgentOfflineAlert 恢复探针离线告警
 func (s *AlertService) resolveAgentOfflineAlert(ctx context.Context, config *models.AlertConfig, agent *models.Agent, state *models.AlertState) {
-	s.mu.RLock()
 	stateSnapshot := *state
-	s.mu.RUnlock()
 
 	s.logger.Info("探针离线告警恢复",
 		zap.String("agentId", agent.ID),
@@ -942,8 +921,8 @@ func (s *AlertService) resolveAgentOfflineAlert(ctx context.Context, config *mod
 		}
 	}
 
-	s.mu.Lock()
 	state.IsFiring = false
 	state.LastRecordID = 0
-	s.mu.Unlock()
+	stateKey := fmt.Sprintf("%s:%s:agent_offline:%s", agent.ID, config.ID, agent.ID)
+	s.states.Set(stateKey, state)
 }
