@@ -13,9 +13,12 @@ interface AgentWithMetrics extends Agent {
 const formatSpeed = (bytesPerSecond: number): string => {
     if (!bytesPerSecond || bytesPerSecond <= 0) return '0 B/s';
     const k = 1024;
-    const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
+    const sizes = ['B/s', 'K/s', 'M/s', 'G/s', 'T/s'];
     const i = Math.min(Math.floor(Math.log(bytesPerSecond) / Math.log(k)), sizes.length - 1);
-    return `${(bytesPerSecond / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+    const value = bytesPerSecond / Math.pow(k, i);
+    // 根据数值大小调整精度，避免过长
+    const decimals = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+    return `${value.toFixed(decimals)} ${sizes[i]}`;
 };
 
 const formatTraffic = (bytesPerSecond: number): string => {
@@ -456,9 +459,17 @@ const ServerList = () => {
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-5 py-4 align-center text-xs text-slate-600 dark:text-slate-300">
-                                    <div>↑ {formatSpeed(upload)}</div>
-                                    <div>↓ {formatSpeed(download)}</div>
+                                <td className="px-5 py-4 align-center">
+                                    <div className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                                        <div className="flex items-center gap-1 whitespace-nowrap">
+                                            <span className="text-slate-400 dark:text-slate-500">↑</span>
+                                            <span className="font-medium tabular-nums">{formatSpeed(upload)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 whitespace-nowrap">
+                                            <span className="text-slate-400 dark:text-slate-500">↓</span>
+                                            <span className="font-medium tabular-nums">{formatSpeed(download)}</span>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         );
