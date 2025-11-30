@@ -230,8 +230,8 @@ func (c *Config) GetWebSocketURL() string {
 	return fmt.Sprintf("%s://%s/ws/agent", scheme, u.Host)
 }
 
-// GetUpdateURL 获取更新检查地址
-func (c *Config) GetUpdateURL() string {
+// GetLatestVersionURL 获取更新检查地址
+func (c *Config) GetLatestVersionURL() string {
 	return c.Endpoint() + "/api/agent/version"
 }
 

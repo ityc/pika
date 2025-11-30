@@ -292,7 +292,7 @@ func (a *Agent) registerAgent(conn *safeConn) error {
 			Hostname: hostname,
 			OS:       runtime.GOOS,
 			Arch:     runtime.GOARCH,
-			Version:  version.GetVersion(),
+			Version:  GetVersion(),
 		},
 		ApiKey: a.cfg.Server.APIKey,
 	}

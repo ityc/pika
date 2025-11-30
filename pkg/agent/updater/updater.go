@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/dushixiang/pika/pkg/agent/config"
@@ -65,7 +64,7 @@ func (u *Updater) Start(ctx context.Context) {
 	log.Printf("自动更新已启用，检查间隔: %v", u.cfg.GetUpdateCheckInterval())
 
 	// 立即检查一次
-	u.checkAndUpdate()
+	u.CheckAndUpdate()
 
 	// 定时检查
 	ticker := time.NewTicker(u.cfg.GetUpdateCheckInterval())
@@ -74,7 +73,7 @@ func (u *Updater) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			u.checkAndUpdate()
+			u.CheckAndUpdate()
 		case <-ctx.Done():
 			log.Println("停止自动更新检查")
 			return
@@ -82,8 +81,8 @@ func (u *Updater) Start(ctx context.Context) {
 	}
 }
 
-// checkAndUpdate 检查并更新
-func (u *Updater) checkAndUpdate() {
+// CheckAndUpdate 检查并更新
+func (u *Updater) CheckAndUpdate() {
 	log.Println("🔍 检查更新...")
 
 	// 获取最新版本信息
@@ -112,15 +111,13 @@ func (u *Updater) checkAndUpdate() {
 
 // fetchLatestVersion 获取最新版本信息
 func (u *Updater) fetchLatestVersion() (*VersionInfo, error) {
-	updateURL := u.cfg.GetUpdateURL()
-	return u.checkUpdateWithClient(updateURL, u.currentVer)
+	latestVersionURL := u.cfg.GetLatestVersionURL()
+	return u.checkUpdateWithClient(latestVersionURL)
 }
 
 // checkUpdateWithClient 使用实例的 httpClient 检查更新
-func (u *Updater) checkUpdateWithClient(updateURL, currentVer string) (*VersionInfo, error) {
-	url := fmt.Sprintf("%s?os=%s&arch=%s", updateURL, runtime.GOOS, runtime.GOARCH)
-
-	resp, err := u.httpClient.Get(url)
+func (u *Updater) checkUpdateWithClient(latestVersionURL string) (*VersionInfo, error) {
+	resp, err := u.httpClient.Get(latestVersionURL)
 	if err != nil {
 		return nil, fmt.Errorf("请求失败: %w", err)
 	}
@@ -165,63 +162,6 @@ func (u *Updater) downloadAndUpdate(versionInfo *VersionInfo) error {
 	// 退出当前进程，让系统服务管理器（systemd/supervisor等）自动重启
 	// 注意：这要求服务配置了自动重启（如 systemd 的 Restart=always）
 	os.Exit(1)
-
-	return nil
-}
-
-// CheckUpdate 手动检查更新（用于命令行）
-func CheckUpdate(updateURL, currentVer string) (*VersionInfo, error) {
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-
-	url := fmt.Sprintf("%s?os=%s&arch=%s", updateURL, runtime.GOOS, runtime.GOARCH)
-
-	resp, err := client.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP 状态码: %d", resp.StatusCode)
-	}
-
-	var versionInfo VersionInfo
-	if err := json.NewDecoder(resp.Body).Decode(&versionInfo); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %w", err)
-	}
-
-	return &versionInfo, nil
-}
-
-// Update 手动更新（用于命令行）
-func Update(downloadURL string) error {
-	client := &http.Client{
-		Timeout: 300 * time.Second,
-	}
-
-	// 下载文件
-	resp, err := client.Get(downloadURL)
-	if err != nil {
-		return fmt.Errorf("下载失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("HTTP 状态码: %d", resp.StatusCode)
-	}
-
-	// 使用 selfupdate 应用更新
-	if err := selfupdate.Apply(resp.Body, selfupdate.Options{}); err != nil {
-		return fmt.Errorf("应用更新失败: %w", err)
-	}
-
-	log.Printf("✅ 更新成功，进程即将退出，等待系统服务重启...")
-
-	// 退出当前进程，让系统服务管理器（systemd/supervisor等）自动重启
-	// 注意：这要求服务配置了自动重启（如 systemd 的 Restart=always）
-	os.Exit(0)
 
 	return nil
 }

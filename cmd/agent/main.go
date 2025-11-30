@@ -374,28 +374,12 @@ func updateAgent(cmd *cobra.Command, args []string) {
 
 	log.Println("🔍 检查更新...")
 
-	// 检查更新
-	versionInfo, err := updater.CheckUpdate(cfg.GetUpdateURL(), service.GetVersion())
+	up, err := updater.New(cfg, service.GetVersion())
 	if err != nil {
-		log.Fatalf("❌ 检查更新失败: %v", err)
+		log.Fatalf("❌ 创建更新器失败: %v", err)
 	}
 
-	// 比较版本
-	if versionInfo.Version == service.GetVersion() {
-		log.Printf("✅ 当前已是最新版本: %s", service.GetVersion())
-		return
-	}
-
-	log.Printf("🆕 发现新版本: %s (当前版本: %s)", versionInfo.Version, service.GetVersion())
-
-	// 下载并更新
-	downloadURL := cfg.GetDownloadURL()
-	if err := updater.Update(downloadURL); err != nil {
-		log.Fatalf("❌ 更新失败: %v", err)
-	}
-
-	log.Println("✅ 更新成功")
-	log.Println("   请重启服务以使用新版本")
+	up.CheckAndUpdate()
 }
 
 // registerAgent 注册探针
