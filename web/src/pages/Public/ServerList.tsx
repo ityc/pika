@@ -358,7 +358,7 @@ const ServerList = () => {
                         const memoryUsage = agent.metrics?.memory?.usagePercent ?? 0;
                         const memoryTotal = agent.metrics?.memory?.total ?? 0;
                         const memoryUsed = agent.metrics?.memory?.used ?? 0;
-                        const memoryFree = agent.metrics?.memory?.free ?? 0;
+                        const memoryAvailable = agent.metrics?.memory?.available ?? 0;
 
                         const diskUsage = calculateDiskUsage(agent.metrics);
                         const diskTotal = agent.metrics?.disk?.total ?? 0;
@@ -453,7 +453,7 @@ const ServerList = () => {
                                         </div>
                                         <div className="text-xs text-slate-500 dark:text-slate-400">
                                             <div>总计:{formatBytes(memoryTotal)}</div>
-                                            <div>已用:{formatBytes(memoryUsed)} / 剩余:{formatBytes(memoryFree)}</div>
+                                            <div>已用:{formatBytes(memoryUsed)} / 剩余:{formatBytes(memoryAvailable)}</div>
                                         </div>
                                     </div>
                                 </td>

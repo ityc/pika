@@ -742,7 +742,10 @@ const ServerDetail = () => {
                     label: '已用 / 总量',
                     value: `${formatBytes(latestMetrics.memory?.used)} / ${formatBytes(latestMetrics.memory?.total)}`
                 },
-                {label: 'Swap 已用', value: formatBytes(latestMetrics.memory?.swapUsed)},
+                {
+                    label: 'Swap 已用',
+                    value: `${formatBytes(latestMetrics.memory?.swapUsed)} / ${formatBytes(latestMetrics.memory?.swapTotal)}`
+                },
             ],
         });
 

@@ -31,15 +31,6 @@ export interface Agent {
     updatedAt?: string;
 }
 
-export interface AgentInfo {
-    name: string;
-    hostname: string;
-    ip: string;
-    os: string;
-    arch: string;
-    version: string;
-}
-
 // 聚合指标数据（所有图表查询只返回聚合数据）
 export interface AggregatedCPUMetric {
     timestamp: number;
@@ -125,6 +116,7 @@ export interface MemoryMetric {
     total: number;
     used: number;
     free: number;
+    available: number;
     usagePercent: number;
     swapTotal: number;
     swapUsed: number;

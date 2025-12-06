@@ -99,6 +99,7 @@ func (s *MetricService) HandleMetricData(ctx context.Context, agentID string, me
 			Total:        memData.Total, // 现在可以从合并后的数据获取
 			Used:         memData.Used,
 			Free:         memData.Free,
+			Available:    memData.Available,
 			UsagePercent: memData.UsagePercent,
 			SwapTotal:    memData.SwapTotal,
 			SwapUsed:     memData.SwapUsed,
