@@ -51,7 +51,7 @@ const formatDateTime = (timestamp: number): string => {
 const formatPercentValue = (value: number): string => (Number.isFinite(value) ? value.toFixed(2) : '0.00');
 
 const LoadingSpinner = () => (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#141414]">
         <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-slate-400 dark:text-slate-400"/>
             <p className="text-sm text-slate-500 dark:text-slate-400">数据加载中，请稍候...</p>
@@ -60,10 +60,10 @@ const LoadingSpinner = () => (
 );
 
 const EmptyState = ({message = '监控数据不存在'}: { message?: string }) => (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#141414]">
         <div className="flex flex-col items-center gap-3 text-center">
             <div
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-300">
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-300">
                 <Shield className="h-8 w-8"/>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">{message}</p>
@@ -96,7 +96,7 @@ const ChartPlaceholder = ({
 }) => (
     <div
         className={cn(
-            "flex items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900",
+            "flex items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/40",
             heightClass
         )}
     >
@@ -120,13 +120,13 @@ const Card = ({
     children: ReactNode;
 }) => (
     <section
-        className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60 p-6">
+        className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-6">
         {(title || description || action) && (
             <div
-                className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-700 pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     {title ?
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{title}</h2> : null}
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2> : null}
                     {description ?
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
                 </div>
@@ -185,20 +185,20 @@ const UptimeBar = ({uptime}: { uptime: number }) => {
 
 const statThemes = {
     blue: {
-        icon: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200',
-        accent: 'text-blue-600 dark:text-blue-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        accent: 'text-slate-700 dark:text-slate-300',
     },
     emerald: {
-        icon: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-200',
-        accent: 'text-emerald-600 dark:text-emerald-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        accent: 'text-slate-700 dark:text-slate-300',
     },
     amber: {
-        icon: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-200',
-        accent: 'text-amber-600 dark:text-amber-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        accent: 'text-slate-700 dark:text-slate-300',
     },
     rose: {
-        icon: 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-200',
-        accent: 'text-rose-600 dark:text-rose-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        accent: 'text-slate-700 dark:text-slate-300',
     },
 };
 
@@ -212,14 +212,14 @@ const StatCard = ({icon, label, value, color = 'blue'}: {
 
     return (
         <div
-            className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60 p-4 transition hover:-translate-y-0.5">
+            className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4 transition hover:-translate-y-0.5">
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", theme.icon)}>
                         {icon}
                     </div>
                     <div>
-                        <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        <div className="text-sm font-semibold text-slate-800 dark:text-white">
                             {label}
                         </div>
                         <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">当前指标</div>
@@ -255,8 +255,8 @@ const CustomTooltip = ({active, payload, label, unit = ' ms'}: TooltipProps<numb
 
     return (
         <div
-            className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs">
-            <p className="font-semibold text-slate-700 dark:text-slate-200">{displayLabel}</p>
+            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs">
+            <p className="font-semibold text-slate-700 dark:text-white">{displayLabel}</p>
             <div className="mt-1 space-y-1">
                 {payload.map((entry, index) => {
                     if (!entry) {
@@ -310,8 +310,8 @@ const TimeRangeSelector = ({
                     className={cn(
                         "rounded-lg border px-3 py-1.5 text-sm transition",
                         isActive
-                            ? 'border-blue-200 dark:border-blue-400 bg-blue-600 dark:bg-blue-500 text-white'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-blue-200 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-200'
+                            ? 'border-slate-300 dark:border-slate-600 bg-slate-600 dark:bg-slate-700 text-white'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-200'
                     )}
                 >
                     {option.label}
@@ -443,11 +443,11 @@ const MonitorDetail = () => {
     ];
 
     return (
-        <div className="bg-slate-50 dark:bg-slate-900">
+        <div className="bg-slate-50 dark:bg-[#141414]">
             <div className="mx-auto flex max-w-7xl flex-col px-4 pb-10 pt-6 sm:px-6 lg:px-8">
                 {/* Hero Section */}
                 <section
-                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-6 text-white">
+                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 p-6 text-white">
                     <div
                         className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_top,rgba(255,255,255,0.35),transparent_55%)]"/>
                     <div className="relative flex flex-col gap-6">
@@ -564,7 +564,7 @@ const MonitorDetail = () => {
                                     ? 'border-red-200 dark:border-red-500/40 bg-red-50 dark:bg-red-500/10'
                                     : certExpiringSoon
                                         ? 'border-amber-200 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10'
-                                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60'
+                                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'
                             )}>
                                 <div className="flex items-center gap-3">
                                     <Shield className={cn(
@@ -582,7 +582,7 @@ const MonitorDetail = () => {
                                                 ? 'text-red-900 dark:text-red-100'
                                                 : certExpiringSoon
                                                     ? 'text-amber-900 dark:text-amber-100'
-                                                    : 'text-slate-900 dark:text-slate-50'
+                                                    : 'text-slate-900 dark:text-white'
                                         )}>
                                             TLS 证书信息
                                         </h3>
@@ -630,7 +630,7 @@ const MonitorDetail = () => {
                                     <select
                                         value={selectedAgent}
                                         onChange={(e) => setSelectedAgent(e.target.value)}
-                                        className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-blue-300 dark:hover:border-blue-500 focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/40"
+                                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 focus:border-slate-500 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600/40"
                                     >
                                         <option value="all">所有探针</option>
                                         {availableAgents.map((agent) => (
@@ -719,9 +719,9 @@ const MonitorDetail = () => {
                             <div className="inline-block min-w-full align-middle">
                                 <div className="overflow-hidden">
                                     <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-                                        <thead className="bg-slate-50 dark:bg-slate-900/70">
+                                        <thead className="bg-slate-50 dark:bg-slate-800">
                                         <tr>
-                                            <th className="whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                            <th className="whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 dark:text-white">
                                                 探针 ID
                                             </th>
                                             <th className="whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -748,7 +748,7 @@ const MonitorDetail = () => {
                                         </tr>
                                         </thead>
                                         <tbody
-                                            className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-900">
+                                            className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800/40">
                                         {monitorStats.map((stats, index) => {
                                             const color = AGENT_COLORS[index % AGENT_COLORS.length];
                                             return (
@@ -764,7 +764,7 @@ const MonitorDetail = () => {
                                                                 {stats.agentName ? (
                                                                     <>
                                                                     <span
-                                                                        className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                                                                        className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white truncate">
                                                                         {stats.agentName}
                                                                     </span>
                                                                         <span
@@ -789,7 +789,7 @@ const MonitorDetail = () => {
                                                             <Clock
                                                                 className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 dark:text-slate-500 flex-shrink-0"/>
                                                             <span
-                                                                className="text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                                className="text-xs sm:text-sm font-medium text-slate-900 dark:text-white">
                                                             {formatTime(stats.currentResponse)}
                                                         </span>
                                                         </div>

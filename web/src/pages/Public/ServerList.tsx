@@ -189,7 +189,7 @@ const ServerList = () => {
                         tabIndex={0}
                         to={`/servers/${agent.id}`}
                         className={cn(
-                            "group relative flex h-full cursor-pointer flex-col gap-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-transparent p-5 transition duration-200 hover:border-blue-300 dark:hover:border-blue-500/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200",
+                            "group relative flex h-full cursor-pointer flex-col gap-5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-transparent p-5 transition duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200",
                             agent.status !== 1 && "filter grayscale"
                         )}
                     >
@@ -197,7 +197,7 @@ const ServerList = () => {
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">
+                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                                             {agent.name || agent.hostname}
                                         </h3>
                                         <span
@@ -211,7 +211,7 @@ const ServerList = () => {
                                         </span>
                                     </div>
                                     <span
-                                        className="inline-flex items-center gap-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-700 dark:text-blue-200">
+                                        className="inline-flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
                                         {agent.os} · {agent.arch}
                                     </span>
                                 </div>
@@ -220,7 +220,7 @@ const ServerList = () => {
                                         agent.tags?.map((tag, index) => (
                                             <span
                                                 key={index}
-                                                className="inline-flex items-center gap-1 rounded bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 text-blue-700 dark:text-blue-200">
+                                                className="inline-flex items-center gap-1 rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-slate-700 dark:text-slate-300">
                                                 {tag}
                                             </span>
                                         ))
@@ -247,7 +247,7 @@ const ServerList = () => {
                                         </div>
                                         <span className="text-xs font-medium text-slate-600 dark:text-slate-200">CPU</span>
                                     </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-slate-50">
+                                    <div className="text-sm font-bold text-slate-900 dark:text-white">
                                         {formatPercentValue(cpuUsage)}%
                                     </div>
                                     <ProgressBar percent={cpuUsage} colorClass={getProgressColor(cpuUsage)}/>
@@ -262,7 +262,7 @@ const ServerList = () => {
                                         </div>
                                         <span className="text-xs font-medium text-slate-600 dark:text-slate-200">内存</span>
                                     </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-slate-50">
+                                    <div className="text-sm font-bold text-slate-900 dark:text-white">
                                         {formatPercentValue(memoryUsage)}%
                                     </div>
                                     <ProgressBar percent={memoryUsage} colorClass={getProgressColor(memoryUsage)}/>
@@ -277,7 +277,7 @@ const ServerList = () => {
                                         </div>
                                         <span className="text-xs font-medium text-slate-600 dark:text-slate-200">磁盘</span>
                                     </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-slate-50">
+                                    <div className="text-sm font-bold text-slate-900 dark:text-white">
                                         {formatPercentValue(diskUsage)}%
                                     </div>
                                     <ProgressBar percent={diskUsage} colorClass={getProgressColor(diskUsage)}/>
@@ -336,10 +336,10 @@ const ServerList = () => {
     const renderListView = () => (
         <>
             {/* 桌面端：使用表格布局 */}
-            <div className="hidden overflow-hidden rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-[#141414] lg:block">
-                <table className="min-w-full divide-y divide-slate-200 dark:divide-white/10 text-sm">
-                    <thead className="bg-blue-50 dark:bg-slate-800">
-                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+            <div className="hidden overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 lg:block">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300">
                         <th className="px-5 py-3">服务器</th>
                         <th className="px-5 py-3">系统</th>
                         <th className="px-5 py-3">CPU</th>
@@ -348,7 +348,7 @@ const ServerList = () => {
                         <th className="px-5 py-3">网络</th>
                     </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-white/10 text-slate-700 dark:text-slate-200">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-700 dark:text-slate-200">
                     {filteredAgents.map((agent) => {
                         const cpuUsage = agent.metrics?.cpu?.usagePercent ?? 0;
                         const cpuModel = agent.metrics?.cpu?.modelName || '未知';
@@ -380,7 +380,7 @@ const ServerList = () => {
                                     }
                                 }}
                                 className={cn(
-                                    "cursor-pointer transition hover:bg-blue-50 dark:hover:bg-slate-800/50 focus-within:bg-blue-50 dark:focus-within:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200",
+                                    "cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-within:bg-slate-50 dark:focus-within:bg-slate-800/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-200",
                                     agent.status !== 1 && "filter grayscale"
                                 )}
                             >
@@ -388,7 +388,7 @@ const ServerList = () => {
                                 <td className="px-5 py-4 align-center">
                                     <div className="flex flex-col gap-2">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                                            <span className="text-sm font-semibold text-slate-900 dark:text-white">
                                                 {agent.name || agent.hostname}
                                             </span>
                                             <span
@@ -404,7 +404,7 @@ const ServerList = () => {
                                         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                                             {agent.tags && agent.tags.length > 0 && (
                                                 agent.tags?.map((tag, index) => (
-                                                    <span key={index} className="inline-flex items-center gap-1 text-blue-700 dark:text-blue-200">
+                                                    <span key={index} className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300">
                                                         {tag}
                                                     </span>
                                                 ))
@@ -429,7 +429,7 @@ const ServerList = () => {
                                                 <ProgressBar percent={cpuUsage}
                                                              colorClass={getProgressColor(cpuUsage)}/>
                                             </div>
-                                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                                            <span className="text-xs font-semibold text-slate-900 dark:text-white">
                                                 {formatPercentValue(cpuUsage)}%
                                             </span>
                                         </div>
@@ -447,7 +447,7 @@ const ServerList = () => {
                                                 <ProgressBar percent={memoryUsage}
                                                              colorClass={getProgressColor(memoryUsage)}/>
                                             </div>
-                                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                                            <span className="text-xs font-semibold text-slate-900 dark:text-white">
                                                 {formatPercentValue(memoryUsage)}%
                                             </span>
                                         </div>
@@ -464,7 +464,7 @@ const ServerList = () => {
                                                 <ProgressBar percent={diskUsage}
                                                              colorClass={getProgressColor(diskUsage)}/>
                                             </div>
-                                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-50">
+                                            <span className="text-xs font-semibold text-slate-900 dark:text-white">
                                                 {formatPercentValue(diskUsage)}%
                                             </span>
                                         </div>
@@ -510,7 +510,7 @@ const ServerList = () => {
                             className={cn(
                                 "cursor-pointer inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
                                 selectedTag === ''
-                                    ? 'bg-blue-500 dark:bg-blue-500 text-white shadow-md shadow-blue-500/30 dark:shadow-blue-500/30'
+                                    ? 'bg-slate-600 dark:bg-slate-700 text-white shadow-md shadow-slate-500/30 dark:shadow-slate-700/30'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                             )}
                         >
@@ -518,7 +518,7 @@ const ServerList = () => {
                             <span className={cn(
                                 "inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-semibold",
                                 selectedTag === ''
-                                    ? 'bg-blue-400 dark:bg-blue-400 text-white'
+                                    ? 'bg-slate-500 dark:bg-slate-600 text-white'
                                     : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                             )}>
                                 {agents.length}
@@ -535,7 +535,7 @@ const ServerList = () => {
                                     className={cn(
                                         "cursor-pointer inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
                                         selectedTag === tag
-                                            ? 'bg-blue-500 dark:bg-blue-500 text-white shadow-md shadow-blue-500/30 dark:shadow-blue-500/30'
+                                            ? 'bg-slate-600 dark:bg-slate-700 text-white shadow-md shadow-slate-500/30 dark:shadow-slate-700/30'
                                             : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     )}
                                 >
@@ -543,7 +543,7 @@ const ServerList = () => {
                                     <span className={cn(
                                         "inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-semibold",
                                         selectedTag === tag
-                                            ? 'bg-blue-400 dark:bg-blue-400 text-white'
+                                            ? 'bg-slate-500 dark:bg-slate-600 text-white'
                                             : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
                                     )}>
                                         {count}

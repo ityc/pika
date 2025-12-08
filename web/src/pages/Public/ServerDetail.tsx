@@ -102,7 +102,7 @@ const INTERFACE_COLORS = [
 ];
 
 const LoadingSpinner = () => (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#141414]">
         <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-slate-400 dark:text-slate-400"/>
             <p className="text-sm text-slate-500 dark:text-slate-400">数据加载中，请稍候...</p>
@@ -111,10 +111,10 @@ const LoadingSpinner = () => (
 );
 
 const EmptyState = ({message = '服务器不存在或已离线'}: { message?: string }) => (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#141414]">
         <div className="flex flex-col items-center gap-3 text-center">
             <div
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-300">
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-300">
                 <Server className="h-8 w-8"/>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">{message}</p>
@@ -135,7 +135,7 @@ const ChartPlaceholder = ({
 }) => (
     <div
         className={cn(
-            "flex items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900",
+            "flex items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/40",
             heightClass
         )}
     >
@@ -159,13 +159,13 @@ const Card = ({
     children: ReactNode;
 }) => (
     <section
-        className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60 p-6 ">
+        className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-6 ">
         {(title || description || action) && (
             <div
-                className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-700 pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     {title ?
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{title}</h2> : null}
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2> : null}
                     {description ?
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
                 </div>
@@ -180,24 +180,24 @@ type AccentVariant = 'blue' | 'emerald' | 'purple' | 'amber';
 
 const accentThemes: Record<AccentVariant, { icon: string; badge: string; highlight: string }> = {
     blue: {
-        icon: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-200',
-        badge: 'bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-200',
-        highlight: 'text-blue-600 dark:text-blue-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        badge: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        highlight: 'text-slate-700 dark:text-slate-300',
     },
     emerald: {
-        icon: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-200',
-        badge: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-200',
-        highlight: 'text-emerald-600 dark:text-emerald-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        badge: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        highlight: 'text-slate-700 dark:text-slate-300',
     },
     purple: {
-        icon: 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-200',
-        badge: 'bg-purple-100 dark:bg-purple-500/15 text-purple-600 dark:text-purple-200',
-        highlight: 'text-purple-600 dark:text-purple-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        badge: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        highlight: 'text-slate-700 dark:text-slate-300',
     },
     amber: {
-        icon: 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-200',
-        badge: 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-200',
-        highlight: 'text-amber-600 dark:text-amber-200',
+        icon: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        badge: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        highlight: 'text-slate-700 dark:text-slate-300',
     },
 };
 
@@ -206,7 +206,7 @@ const InfoGrid = ({items}: { items: Array<{ label: string; value: ReactNode }> }
         {items.map((item) => (
             <div key={item.label}>
                 <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{item.label}</dt>
-                <dd className="mt-1 font-medium text-slate-900 dark:text-slate-100">{item.value}</dd>
+                <dd className="mt-1 font-medium text-slate-900 dark:text-white">{item.value}</dd>
             </div>
         ))}
     </dl>
@@ -405,14 +405,14 @@ const SnapshotGrid = ({cards}: { cards: SnapshotCardData[] }) => (
             return (
                 <div
                     key={card.key}
-                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60 p-4  transition hover:-translate-y-0.5"
+                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4  transition hover:-translate-y-0.5"
                 >
                     <div className="mb-3 flex items-start justify-between">
                         <div className="flex items-center gap-2">
                             <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", theme.icon)}>
                                 <card.icon className="h-4 w-4"/>
                             </span>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{card.title}</p>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{card.title}</p>
                         </div>
                         <span className={cn("text-xl font-bold", theme.highlight)}>{card.usagePercent}</span>
                     </div>
@@ -421,7 +421,7 @@ const SnapshotGrid = ({cards}: { cards: SnapshotCardData[] }) => (
                             <div key={metric.label} className="flex items-center justify-between text-xs">
                                 <span className="text-slate-500 dark:text-slate-400">{metric.label}</span>
                                 <span
-                                    className="ml-2 text-right font-medium text-slate-900 dark:text-slate-50">{metric.value}</span>
+                                    className="ml-2 text-right font-medium text-slate-900 dark:text-white">{metric.value}</span>
                             </div>
                         ))}
                     </div>
@@ -458,8 +458,8 @@ const CustomTooltip = ({active, payload, label, unit = '%'}: MetricsTooltipProps
 
     return (
         <div
-            className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs">
-            <p className="font-semibold text-slate-700 dark:text-slate-200">{displayLabel}</p>
+            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs">
+            <p className="font-semibold text-slate-700 dark:text-white">{displayLabel}</p>
             <div className="mt-1 space-y-1">
                 {payload.map((entry, index) => {
                     if (!entry) {
@@ -885,10 +885,10 @@ const ServerDetail = () => {
     }
 
     return (
-        <div className="bg-slate-50 dark:bg-slate-900">
+        <div className="bg-slate-50 dark:bg-[#141414]">
             <div className="mx-auto flex max-w-7xl flex-col px-4 pb-10 pt-6 sm:px-6 lg:px-8">
                 <section
-                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-6 text-white">
+                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 p-6 text-white">
                     <div
                         className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_top,rgba(255,255,255,0.35),transparent_55%)]"/>
                     <div className="relative flex flex-col gap-6">
@@ -956,16 +956,16 @@ const ServerDetail = () => {
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 <div
-                                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 p-4">
-                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">运行环境</h3>
+                                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-white">运行环境</h3>
                                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">来自最近一次探针上报的硬件与系统信息</p>
                                     <div className="mt-4">
                                         <InfoGrid items={environmentInfo}/>
                                     </div>
                                 </div>
                                 <div
-                                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 p-4">
-                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">运行状态</h3>
+                                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-white">运行状态</h3>
                                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">关键时间与网络指标，帮助快速判断主机健康状况</p>
                                     <div className="mt-4">
                                         <InfoGrid items={statusInfo}/>
@@ -974,15 +974,15 @@ const ServerDetail = () => {
                             </div>
                             {latestMetrics?.networkConnection && (
                                 <div
-                                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 p-4">
-                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">网络连接统计</h3>
+                                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4">
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-white">网络连接统计</h3>
                                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">TCP
                                         连接各状态的实时统计数据</p>
                                     <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                                         <div className="text-center">
                                             <div className="text-xs text-slate-500 dark:text-slate-400">Total</div>
                                             <div
-                                                className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{latestMetrics.networkConnection.total}</div>
+                                                className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{latestMetrics.networkConnection.total}</div>
                                         </div>
                                         <div className="text-center">
                                             <div className="text-xs text-slate-500 dark:text-slate-400">ESTABLISHED
@@ -1033,9 +1033,9 @@ const ServerDetail = () => {
                     >
                         <div className="grid gap-6 md:grid-cols-2">
                             <section>
-                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                     <span
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                         <Cpu className="h-4 w-4"/>
                                     </span>
                                     CPU 使用率
@@ -1082,9 +1082,9 @@ const ServerDetail = () => {
                             </section>
 
                             <section>
-                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                     <span
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                         <MemoryStick className="h-4 w-4"/>
                                     </span>
                                     内存使用率
@@ -1132,9 +1132,9 @@ const ServerDetail = () => {
 
                             <section>
                                 <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                         <span
-                                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                             <Network className="h-4 w-4"/>
                                         </span>
                                         网络流量（MB/s）
@@ -1143,7 +1143,7 @@ const ServerDetail = () => {
                                         <select
                                             value={selectedInterface}
                                             onChange={(e) => setSelectedInterface(e.target.value)}
-                                            className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:border-blue-300 dark:hover:border-blue-500 focus:border-blue-500 dark:focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-500/40"
+                                            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 focus:border-slate-500 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600/40"
                                         >
                                             {/*<option value="all">所有网卡（聚合）</option>*/}
                                             {availableInterfaces.map((iface) => (
@@ -1239,9 +1239,9 @@ const ServerDetail = () => {
                             </section>
 
                             <section>
-                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                     <span
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400">
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                         <HardDrive className="h-4 w-4"/>
                                     </span>
                                     磁盘 I/O (MB/s)
@@ -1301,9 +1301,9 @@ const ServerDetail = () => {
                             </section>
 
                             <section>
-                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                     <span
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400">
+                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                         <Network className="h-4 w-4"/>
                                     </span>
                                     网络连接统计
@@ -1381,9 +1381,9 @@ const ServerDetail = () => {
 
                             {gpuChartData.length > 0 && (
                                 <section>
-                                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                         <span
-                                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400">
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                             <Zap className="h-4 w-4"/>
                                         </span>
                                         GPU 使用率与温度
@@ -1443,9 +1443,9 @@ const ServerDetail = () => {
                             {temperatureChartData.length > 0 && temperatureTypes.length > 0 && (
                                 <section>
                                     <div className="mb-3 flex items-center justify-between">
-                                        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-white">
                                             <span
-                                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400">
+                                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                                 <Thermometer className="h-4 w-4"/>
                                             </span>
                                             系统温度
@@ -1454,7 +1454,7 @@ const ServerDetail = () => {
                                             <select
                                                 value={selectedTempType}
                                                 onChange={(e) => setSelectedTempType(e.target.value)}
-                                                className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:border-orange-300 dark:hover:border-orange-500 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-500/40"
+                                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 focus:border-slate-500 dark:focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600/40"
                                             >
                                                 <option value="all">所有类型</option>
                                                 {temperatureTypes.map((type) => (
@@ -1516,20 +1516,20 @@ const ServerDetail = () => {
                                 {latestMetrics.gpu.map((gpu) => (
                                     <div
                                         key={gpu.index}
-                                        className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800 p-4"
+                                        className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-4"
                                     >
                                         <div className="mb-3 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <span
-                                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400">
+                                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                                                     <Zap className="h-4 w-4"/>
                                                 </span>
                                                 <div>
-                                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">GPU {gpu.index}</p>
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">GPU {gpu.index}</p>
                                                     <p className="text-xs text-slate-500 dark:text-slate-400">{gpu.name}</p>
                                                 </div>
                                             </div>
-                                            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                            <span className="text-2xl font-bold text-slate-700 dark:text-slate-300">
                                                 {gpu.utilization.toFixed(1)}%
                                             </span>
                                         </div>
@@ -1537,23 +1537,23 @@ const ServerDetail = () => {
                                             <div className="flex items-center justify-between">
                                                 <span className="text-slate-500 dark:text-slate-400">温度</span>
                                                 <span
-                                                    className="font-medium text-slate-900 dark:text-slate-100">{gpu.temperature.toFixed(1)}°C</span>
+                                                    className="font-medium text-slate-900 dark:text-white">{gpu.temperature.toFixed(1)}°C</span>
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-slate-500 dark:text-slate-400">显存</span>
-                                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                                <span className="font-medium text-slate-900 dark:text-white">
                                                     {formatBytes(gpu.memoryUsed)} / {formatBytes(gpu.memoryTotal)}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-slate-500 dark:text-slate-400">功耗</span>
                                                 <span
-                                                    className="font-medium text-slate-900 dark:text-slate-100">{gpu.powerDraw.toFixed(1)}W</span>
+                                                    className="font-medium text-slate-900 dark:text-white">{gpu.powerDraw.toFixed(1)}W</span>
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-slate-500 dark:text-slate-400">风扇转速</span>
                                                 <span
-                                                    className="font-medium text-slate-900 dark:text-slate-100">{gpu.fanSpeed.toFixed(0)}%</span>
+                                                    className="font-medium text-slate-900 dark:text-white">{gpu.fanSpeed.toFixed(0)}%</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1569,13 +1569,13 @@ const ServerDetail = () => {
                                 {latestMetrics.temperature.sort((a, b) => a.sensorKey.localeCompare(b.sensorKey)).map((temp) => (
                                     <div
                                         key={temp.sensorKey}
-                                        className="rounded-xl border border-slate-100 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-700 dark:to-slate-800 p-4"
+                                        className="rounded-xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-slate-50 to-white dark:from-slate-700 dark:to-slate-800 p-4"
                                     >
                                         <div className="flex items-center gap-2 mb-2">
-                                            <Thermometer className="h-4 w-4 text-orange-500 dark:text-orange-400"/>
+                                            <Thermometer className="h-4 w-4 text-slate-600 dark:text-slate-400"/>
                                             <p className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">{temp.sensorLabel}</p>
                                         </div>
-                                        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{temp.temperature.toFixed(1)}°C</p>
+                                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{temp.temperature.toFixed(1)}°C</p>
                                     </div>
                                 ))}
                             </div>
