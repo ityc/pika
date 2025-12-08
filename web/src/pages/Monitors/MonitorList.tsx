@@ -214,9 +214,9 @@ const MonitorList = () => {
             dataIndex: 'name',
             render: (_, record) => (
                 <div className="flex flex-col">
-                    <span className="font-medium text-gray-900">{record.name}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{record.name}</span>
                     {record.description ? (
-                        <span className="text-xs text-gray-500">{record.description}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{record.description}</span>
                     ) : null}
                 </div>
             ),
@@ -257,7 +257,7 @@ const MonitorList = () => {
                     <div className="flex flex-col gap-2">
                         {hasAgents && (
                             <Space wrap size={4}>
-                                <span className="text-xs text-gray-500">探针:</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">探针:</span>
                                 {record.agentNames?.map((id) => (
                                     <Tag key={id} color="blue">{id}</Tag>
                                 ))}
@@ -265,7 +265,7 @@ const MonitorList = () => {
                         )}
                         {hasTags && (
                             <Space wrap size={4}>
-                                <span className="text-xs text-gray-500">标签:</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">标签:</span>
                                 {record.tags?.map((tag) => (
                                     <Tag key={tag} color="green">{tag}</Tag>
                                 ))}

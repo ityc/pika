@@ -24,8 +24,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({title, description, actio
     return (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-                {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">{title}</h1>
+                {description && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>}
             </div>
             {actions && actions.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3">

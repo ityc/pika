@@ -126,7 +126,7 @@ const ApiKeyList = () => {
             title: '名称',
             dataIndex: 'name',
             key: 'name',
-            render: (text) => <span className="font-medium text-gray-900">{text}</span>,
+            render: (text) => <span className="font-medium text-gray-900 dark:text-white">{text}</span>,
         },
         {
             title: 'API密钥',
@@ -139,7 +139,7 @@ const ApiKeyList = () => {
                 const displayText = isVisible ? fullKey : (fullKey.length > 8 ? `${fullKey.substring(0, 8)}...` : fullKey);
                 return (
                     <div className="flex items-center gap-2">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                        <code className="text-xs bg-gray-100 dark:bg-gray-800 dark:text-gray-200 px-2 py-1 rounded font-mono">
                             {displayText}
                         </code>
                         <Button
@@ -176,7 +176,7 @@ const ApiKeyList = () => {
             key: 'createdAt',
             hideInSearch: true,
             render: (value: number) => (
-                <span className="text-gray-600">{dayjs(value).format('YYYY-MM-DD HH:mm')}</span>
+                <span className="text-gray-600 dark:text-gray-400">{dayjs(value).format('YYYY-MM-DD HH:mm')}</span>
             ),
             width: 180,
         },
@@ -186,7 +186,7 @@ const ApiKeyList = () => {
             key: 'updatedAt',
             hideInSearch: true,
             render: (value: number) => (
-                <span className="text-gray-600">{dayjs(value).format('YYYY-MM-DD HH:mm')}</span>
+                <span className="text-gray-600 dark:text-gray-400">{dayjs(value).format('YYYY-MM-DD HH:mm')}</span>
             ),
             width: 180,
         },
@@ -357,19 +357,19 @@ const ApiKeyList = () => {
                 ]}
             >
                 <div className="space-y-4">
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <p className="text-sm text-yellow-800 font-medium">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
                             ⚠️ 重要提示:请妥善保管此密钥,关闭后将无法再次查看完整密钥!
                         </p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">密钥名称</label>
-                        <div className="text-base font-semibold text-gray-900">{newApiKeyData?.name}</div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">密钥名称</label>
+                        <div className="text-base font-semibold text-gray-900 dark:text-white">{newApiKeyData?.name}</div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">API密钥</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API密钥</label>
                         <code
-                            className="block w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-mono break-all">
+                            className="block w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 dark:text-gray-200 rounded px-3 py-2 text-sm font-mono break-all">
                             {newApiKeyData?.key}
                         </code>
                     </div>

@@ -60,15 +60,15 @@ const RecordsDrawer = ({open, config, onClose}: RecordsDrawerProps) => {
                 return (
                     <div className={`flex ${isIPv6 ? 'flex-col gap-1' : 'items-center gap-2'}`}>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">旧:</span>
-                            <span className={`font-mono text-gray-600 ${isIPv6 ? 'text-xs' : ''}`}>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">旧:</span>
+                            <span className={`font-mono text-gray-600 dark:text-gray-400 ${isIPv6 ? 'text-xs' : ''}`}>
                                 {record.oldIp || '(初始)'}
                             </span>
                         </div>
-                        {!isIPv6 && <ArrowRight className="h-4 w-4 text-gray-400"/>}
+                        {!isIPv6 && <ArrowRight className="h-4 w-4 text-gray-400 dark:text-gray-500"/>}
                         <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">新:</span>
-                            <span className={`font-mono font-medium text-blue-600 ${isIPv6 ? 'text-xs break-all' : ''}`}>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">新:</span>
+                            <span className={`font-mono font-medium text-blue-600 dark:text-blue-400 ${isIPv6 ? 'text-xs break-all' : ''}`}>
                                 {record.newIp}
                             </span>
                         </div>
@@ -122,22 +122,22 @@ const RecordsDrawer = ({open, config, onClose}: RecordsDrawerProps) => {
             width={1200}
             destroyOnHidden={true}
         >
-            <div className="mb-4 rounded-lg bg-gray-50 p-4">
+            <div className="mb-4 rounded-lg bg-gray-50 dark:bg-gray-800 p-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span className="text-gray-500">配置名称：</span>
-                        <span className="font-medium">{config.name}</span>
+                        <span className="text-gray-500 dark:text-gray-400">配置名称：</span>
+                        <span className="font-medium dark:text-white">{config.name}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500">DNS 服务商：</span>
-                        <span className="font-medium">{config.provider}</span>
+                        <span className="text-gray-500 dark:text-gray-400">DNS 服务商：</span>
+                        <span className="font-medium dark:text-white">{config.provider}</span>
                     </div>
                     <div>
-                        <span className="text-gray-500">域名数量：</span>
-                        <span className="font-medium">{(config.domainsIpv4?.length || 0) + (config.domainsIpv6?.length || 0)} 个</span>
+                        <span className="text-gray-500 dark:text-gray-400">域名数量：</span>
+                        <span className="font-medium dark:text-white">{(config.domainsIpv4?.length || 0) + (config.domainsIpv6?.length || 0)} 个</span>
                     </div>
                     <div>
-                        <span className="text-gray-500">状态：</span>
+                        <span className="text-gray-500 dark:text-gray-400">状态：</span>
                         <Tag color={config.enabled ? 'success' : 'default'}>
                             {config.enabled ? '启用' : '禁用'}
                         </Tag>

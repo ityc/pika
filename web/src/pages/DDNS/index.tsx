@@ -83,7 +83,7 @@ const DDNSPage = () => {
             render: (_, record) => (
                 <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-blue-500"/>
-                    <span className="font-medium text-gray-900">{record.name}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{record.name}</span>
                 </div>
             ),
         },

@@ -208,9 +208,9 @@ const DDNSModal = ({open, id, config, onCancel, onSuccess}: DDNSModalProps) => {
 
                 <div className={'space-y-4'}>
                     {/* IPv4 配置卡片 */}
-                    <div className="rounded-lg border p-4">
+                    <div className="rounded-lg border dark:border-gray-700 p-4">
                         <div className="mb-3 flex items-center justify-between">
-                            <h4 className="font-medium">IPv4 配置</h4>
+                            <h4 className="font-medium dark:text-white">IPv4 配置</h4>
                             <Form.Item name="enableIpv4" valuePropName="checked" noStyle>
                                 <Switch/>
                             </Form.Item>
@@ -271,9 +271,9 @@ const DDNSModal = ({open, id, config, onCancel, onSuccess}: DDNSModalProps) => {
                     </div>
 
                     {/* IPv6 配置卡片 */}
-                    <div className="rounded-lg border p-4">
+                    <div className="rounded-lg border dark:border-gray-700 p-4">
                         <div className="mb-3 flex items-center justify-between">
-                            <h4 className="font-medium">IPv6 配置</h4>
+                            <h4 className="font-medium dark:text-white">IPv6 配置</h4>
                             <Form.Item name="enableIpv6" valuePropName="checked" noStyle>
                                 <Switch/>
                             </Form.Item>
