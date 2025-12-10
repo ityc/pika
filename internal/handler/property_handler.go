@@ -198,24 +198,9 @@ func (h *PropertyHandler) TestNotificationChannel(c echo.Context) error {
 		})
 	}
 
-	// 发送测试消息
+	// 发送测试消息（动态匹配通知渠道类型）
 	message := "这是一条测试通知消息"
-
-	var sendErr error
-	switch targetChannel.Type {
-	case "dingtalk":
-		sendErr = h.notifier.SendDingTalkByConfig(ctx, targetChannel.Config, message)
-	case "wecom":
-		sendErr = h.notifier.SendWeComByConfig(ctx, targetChannel.Config, message)
-	case "feishu":
-		sendErr = h.notifier.SendFeishuByConfig(ctx, targetChannel.Config, message)
-	case "webhook":
-		sendErr = h.notifier.SendWebhookByConfig(ctx, targetChannel.Config, message)
-	default:
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "不支持的通知渠道类型",
-		})
-	}
+	sendErr := h.notifier.SendTestNotification(ctx, targetChannel.Type, targetChannel.Config, message)
 
 	if sendErr != nil {
 		h.logger.Error("发送测试通知失败", zap.String("type", channelType), zap.Error(sendErr))

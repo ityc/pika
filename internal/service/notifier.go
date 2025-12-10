@@ -11,12 +11,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dushixiang/pika/internal/models"
 	"github.com/valyala/fasttemplate"
 	"go.uber.org/zap"
+	"gopkg.in/gomail.v2"
 )
 
 // Notifier 告警通知服务
@@ -184,6 +186,52 @@ func (n *Notifier) sendFeishu(ctx context.Context, webhook, message string) erro
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// sendTelegram 发送 Telegram 通知
+func (n *Notifier) sendTelegram(ctx context.Context, botToken, chatID, message string) error {
+	// 构造 Telegram Bot API URL
+	webhookURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken)
+
+	// 构造消息体
+	body := map[string]interface{}{
+		"chat_id": chatID,
+		"text":    message,
+		// 可选：使用 Markdown 格式
+		// "parse_mode": "Markdown",
+	}
+
+	_, err := n.sendJSONRequest(ctx, webhookURL, body)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// sendEmail 发送邮件通知
+func (n *Notifier) sendEmail(ctx context.Context, smtpHost string, smtpPort int, fromEmail, password, toEmail, subject, message string) error {
+	// 创建邮件消息
+	m := gomail.NewMessage()
+	m.SetHeader("From", fromEmail)
+	m.SetHeader("To", toEmail)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", message)
+
+	// 创建 SMTP 拨号器
+	d := gomail.NewDialer(smtpHost, smtpPort, fromEmail, password)
+
+	// 发送邮件
+	if err := d.DialAndSend(m); err != nil {
+		return fmt.Errorf("发送邮件失败: %w", err)
+	}
+
+	n.logger.Info("邮件发送成功",
+		zap.String("from", fromEmail),
+		zap.String("to", toEmail),
+		zap.String("subject", subject),
+	)
+
 	return nil
 }
 
@@ -462,6 +510,67 @@ func (n *Notifier) sendFeishuByConfig(ctx context.Context, config map[string]int
 	return n.sendFeishu(ctx, webhook, message)
 }
 
+// sendTelegramByConfig 根据配置发送 Telegram 通知
+func (n *Notifier) sendTelegramByConfig(ctx context.Context, config map[string]interface{}, message string) error {
+	botToken, ok := config["botToken"].(string)
+	if !ok || botToken == "" {
+		return fmt.Errorf("Telegram 配置缺少 botToken")
+	}
+
+	chatID, ok := config["chatID"].(string)
+	if !ok || chatID == "" {
+		return fmt.Errorf("Telegram 配置缺少 chatID")
+	}
+
+	return n.sendTelegram(ctx, botToken, chatID, message)
+}
+
+// sendEmailByConfig 根据配置发送邮件通知
+func (n *Notifier) sendEmailByConfig(ctx context.Context, config map[string]interface{}, message string) error {
+	smtpHost, ok := config["smtpHost"].(string)
+	if !ok || smtpHost == "" {
+		return fmt.Errorf("邮件配置缺少 smtpHost")
+	}
+
+	// 端口可能是 float64 或 string
+	var smtpPort int
+	switch v := config["smtpPort"].(type) {
+	case float64:
+		smtpPort = int(v)
+	case string:
+		port, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("邮件配置 smtpPort 格式错误: %w", err)
+		}
+		smtpPort = port
+	default:
+		return fmt.Errorf("邮件配置缺少 smtpPort")
+	}
+
+	fromEmail, ok := config["fromEmail"].(string)
+	if !ok || fromEmail == "" {
+		return fmt.Errorf("邮件配置缺少 fromEmail")
+	}
+
+	password, ok := config["password"].(string)
+	if !ok || password == "" {
+		return fmt.Errorf("邮件配置缺少 password")
+	}
+
+	toEmail, ok := config["toEmail"].(string)
+	if !ok || toEmail == "" {
+		return fmt.Errorf("邮件配置缺少 toEmail")
+	}
+
+	// 邮件主题，默认为"Pika 告警通知"
+	subject, ok := config["subject"].(string)
+	if !ok || subject == "" {
+		subject = "Pika 告警通知"
+	}
+
+	return n.sendEmail(ctx, smtpHost, smtpPort, fromEmail, password, toEmail, subject, message)
+}
+
 // sendWebhookByConfig 根据配置发送自定义Webhook
 func (n *Notifier) sendWebhookByConfig(ctx context.Context, config map[string]interface{}, agent *models.Agent, record *models.AlertRecord) error {
 	return n.sendCustomWebhook(ctx, config, agent, record)
@@ -487,11 +596,12 @@ func (n *Notifier) SendNotificationByConfig(ctx context.Context, channelConfig *
 		return n.sendWeComByConfig(ctx, channelConfig.Config, message)
 	case "feishu":
 		return n.sendFeishuByConfig(ctx, channelConfig.Config, message)
+	case "telegram":
+		return n.sendTelegramByConfig(ctx, channelConfig.Config, message)
+	case "email":
+		return n.sendEmailByConfig(ctx, channelConfig.Config, message)
 	case "webhook":
 		return n.sendWebhookByConfig(ctx, channelConfig.Config, agent, record)
-	case "email":
-		// TODO: 实现邮件通知
-		return fmt.Errorf("邮件通知暂未实现")
 	default:
 		return fmt.Errorf("不支持的通知渠道类型: %s", channelConfig.Type)
 	}
@@ -533,6 +643,16 @@ func (n *Notifier) SendFeishuByConfig(ctx context.Context, config map[string]int
 	return n.sendFeishuByConfig(ctx, config, message)
 }
 
+// SendTelegramByConfig 导出方法供外部调用
+func (n *Notifier) SendTelegramByConfig(ctx context.Context, config map[string]interface{}, message string) error {
+	return n.sendTelegramByConfig(ctx, config, message)
+}
+
+// SendEmailByConfig 导出方法供外部调用
+func (n *Notifier) SendEmailByConfig(ctx context.Context, config map[string]interface{}, message string) error {
+	return n.sendEmailByConfig(ctx, config, message)
+}
+
 // SendWebhookByConfig 导出方法供外部调用（测试用）
 func (n *Notifier) SendWebhookByConfig(ctx context.Context, config map[string]interface{}, message string) error {
 	// 为了测试，创建一个临时的 agent 和 record
@@ -552,4 +672,40 @@ func (n *Notifier) SendWebhookByConfig(ctx context.Context, config map[string]in
 		FiredAt:     time.Now().UnixMilli(),
 	}
 	return n.sendWebhookByConfig(ctx, config, agent, record)
+}
+
+// SendTestNotification 发送测试通知（动态匹配通知渠道类型）
+func (n *Notifier) SendTestNotification(ctx context.Context, channelType string, config map[string]interface{}, message string) error {
+	switch channelType {
+	case "dingtalk":
+		return n.sendDingTalkByConfig(ctx, config, message)
+	case "wecom":
+		return n.sendWeComByConfig(ctx, config, message)
+	case "feishu":
+		return n.sendFeishuByConfig(ctx, config, message)
+	case "telegram":
+		return n.sendTelegramByConfig(ctx, config, message)
+	case "email":
+		return n.sendEmailByConfig(ctx, config, message)
+	case "webhook":
+		// Webhook 需要 agent 和 record，创建测试数据
+		agent := &models.Agent{
+			ID:       "test-agent",
+			Name:     "测试探针",
+			Hostname: "test-host",
+			IP:       "127.0.0.1",
+		}
+		record := &models.AlertRecord{
+			AlertType:   "test",
+			Level:       "info",
+			Status:      "firing",
+			Message:     message,
+			Threshold:   0,
+			ActualValue: 0,
+			FiredAt:     time.Now().UnixMilli(),
+		}
+		return n.sendWebhookByConfig(ctx, config, agent, record)
+	default:
+		return fmt.Errorf("不支持的通知渠道类型: %s", channelType)
+	}
 }

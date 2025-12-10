@@ -15,6 +15,14 @@ const NotificationChannels = () => {
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
 
+    // 监听各个通知渠道的启用状态
+    const dingtalkEnabled = Form.useWatch('dingtalkEnabled', form);
+    const wecomEnabled = Form.useWatch('wecomEnabled', form);
+    const feishuEnabled = Form.useWatch('feishuEnabled', form);
+    const telegramEnabled = Form.useWatch('telegramEnabled', form);
+    const emailEnabled = Form.useWatch('emailEnabled', form);
+    const webhookEnabled = Form.useWatch('webhookEnabled', form);
+
     // 获取通知渠道列表
     const { data: channels = [], isLoading } = useQuery({
         queryKey: ['notificationChannels'],
@@ -61,6 +69,18 @@ const NotificationChannels = () => {
                     formValues.feishuEnabled = channel.enabled;
                     formValues.feishuSecretKey = channel.config?.secretKey || '';
                     formValues.feishuSignSecret = channel.config?.signSecret || '';
+                } else if (channel.type === 'telegram') {
+                    formValues.telegramEnabled = channel.enabled;
+                    formValues.telegramBotToken = channel.config?.botToken || '';
+                    formValues.telegramChatID = channel.config?.chatID || '';
+                } else if (channel.type === 'email') {
+                    formValues.emailEnabled = channel.enabled;
+                    formValues.emailSmtpHost = channel.config?.smtpHost || '';
+                    formValues.emailSmtpPort = channel.config?.smtpPort || 587;
+                    formValues.emailFromEmail = channel.config?.fromEmail || '';
+                    formValues.emailPassword = channel.config?.password || '';
+                    formValues.emailToEmail = channel.config?.toEmail || '';
+                    formValues.emailSubject = channel.config?.subject || 'Pika 告警通知';
                 } else if (channel.type === 'webhook') {
                     formValues.webhookEnabled = channel.enabled;
                     formValues.webhookUrl = channel.config?.url || '';
@@ -118,6 +138,34 @@ const NotificationChannels = () => {
                     config: {
                         secretKey: values.feishuSecretKey || '',
                         signSecret: values.feishuSignSecret || '',
+                    },
+                });
+            }
+
+            // Telegram
+            if (values.telegramEnabled || values.telegramBotToken) {
+                newChannels.push({
+                    type: 'telegram',
+                    enabled: values.telegramEnabled || false,
+                    config: {
+                        botToken: values.telegramBotToken || '',
+                        chatID: values.telegramChatID || '',
+                    },
+                });
+            }
+
+            // 邮件
+            if (values.emailEnabled || values.emailSmtpHost) {
+                newChannels.push({
+                    type: 'email',
+                    enabled: values.emailEnabled || false,
+                    config: {
+                        smtpHost: values.emailSmtpHost || '',
+                        smtpPort: values.emailSmtpPort || 587,
+                        fromEmail: values.emailFromEmail || '',
+                        password: values.emailPassword || '',
+                        toEmail: values.emailToEmail || '',
+                        subject: values.emailSubject || 'Pika 告警通知',
                     },
                 });
             }
@@ -195,7 +243,7 @@ const NotificationChannels = () => {
                                 icon={<TestTube size={14} />}
                                 onClick={() => handleTest('dingtalk')}
                                 loading={testMutation.isPending}
-                                disabled={!form.getFieldValue('dingtalkEnabled')}
+                                disabled={!dingtalkEnabled}
                             >
                                 测试
                             </Button>
@@ -256,7 +304,7 @@ const NotificationChannels = () => {
                                 icon={<TestTube size={14} />}
                                 onClick={() => handleTest('wecom')}
                                 loading={testMutation.isPending}
-                                disabled={!form.getFieldValue('wecomEnabled')}
+                                disabled={!wecomEnabled}
                             >
                                 测试
                             </Button>
@@ -308,7 +356,7 @@ const NotificationChannels = () => {
                                 icon={<TestTube size={14} />}
                                 onClick={() => handleTest('feishu')}
                                 loading={testMutation.isPending}
-                                disabled={!form.getFieldValue('feishuEnabled')}
+                                disabled={!feishuEnabled}
                             >
                                 测试
                             </Button>
@@ -348,6 +396,165 @@ const NotificationChannels = () => {
                         </Form.Item>
                     </Card>
 
+                    {/* Telegram 通知 */}
+                    <Card
+                        title={
+                            <div className={'flex items-center gap-2'}>
+                                <div>Telegram 通知</div>
+                                <div className={'text-xs font-normal'}>
+                                    了解更多：<a href="https://core.telegram.org/bots/api"
+                                        target="_blank"
+                                        rel="noopener noreferrer">https://core.telegram.org/bots/api</a>
+                                </div>
+                            </div>
+                        }
+                        type="inner"
+                        className="mb-4"
+                        extra={
+                            <Button
+                                type="link"
+                                size="small"
+                                icon={<TestTube size={14} />}
+                                onClick={() => handleTest('telegram')}
+                                loading={testMutation.isPending}
+                                disabled={!telegramEnabled}
+                            >
+                                测试
+                            </Button>
+                        }
+                    >
+                        <Form.Item label="启用 Telegram 通知" name="telegramEnabled" valuePropName="checked">
+                            <Switch />
+                        </Form.Item>
+
+                        <Form.Item
+                            noStyle
+                            shouldUpdate={(prevValues, currentValues) =>
+                                prevValues.telegramEnabled !== currentValues.telegramEnabled
+                            }
+                        >
+                            {({ getFieldValue }) =>
+                                getFieldValue('telegramEnabled') ? (
+                                    <>
+                                        <Form.Item
+                                            label="Bot Token"
+                                            name="telegramBotToken"
+                                            rules={[{ required: true, message: '请输入 Bot Token' }]}
+                                            tooltip="通过 @BotFather 创建机器人后获得的 token"
+                                        >
+                                            <Input.Password placeholder="输入 Bot Token" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="Chat ID"
+                                            name="telegramChatID"
+                                            rules={[{ required: true, message: '请输入 Chat ID' }]}
+                                            tooltip="可以是用户 ID、群组 ID 或频道 ID，通过 @userinfobot 等机器人获取"
+                                        >
+                                            <Input placeholder="输入 Chat ID，例如：123456789" />
+                                        </Form.Item>
+                                    </>
+                                ) : null
+                            }
+                        </Form.Item>
+                    </Card>
+
+                    {/* 邮件通知 */}
+                    <Card
+                        title={
+                            <div className={'flex items-center gap-2'}>
+                                <div>邮件通知</div>
+                                <div className={'text-xs font-normal text-gray-500'}>
+                                    使用 SMTP 协议发送邮件告警
+                                </div>
+                            </div>
+                        }
+                        type="inner"
+                        className="mb-4"
+                        extra={
+                            <Button
+                                type="link"
+                                size="small"
+                                icon={<TestTube size={14} />}
+                                onClick={() => handleTest('email')}
+                                loading={testMutation.isPending}
+                                disabled={!emailEnabled}
+                            >
+                                测试
+                            </Button>
+                        }
+                    >
+                        <Form.Item label="启用邮件通知" name="emailEnabled" valuePropName="checked">
+                            <Switch />
+                        </Form.Item>
+
+                        <Form.Item
+                            noStyle
+                            shouldUpdate={(prevValues, currentValues) =>
+                                prevValues.emailEnabled !== currentValues.emailEnabled
+                            }
+                        >
+                            {({ getFieldValue }) =>
+                                getFieldValue('emailEnabled') ? (
+                                    <>
+                                        <Form.Item
+                                            label="SMTP 服务器"
+                                            name="emailSmtpHost"
+                                            rules={[{ required: true, message: '请输入 SMTP 服务器地址' }]}
+                                            tooltip="邮件服务商的 SMTP 服务器地址，如 smtp.gmail.com"
+                                        >
+                                            <Input placeholder="例如：smtp.gmail.com" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="SMTP 端口"
+                                            name="emailSmtpPort"
+                                            rules={[{ required: true, message: '请输入 SMTP 端口' }]}
+                                            tooltip="通常为 587（STARTTLS）或 465（SSL/TLS）"
+                                        >
+                                            <Input type="number" placeholder="587" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="发件人邮箱"
+                                            name="emailFromEmail"
+                                            rules={[
+                                                { required: true, message: '请输入发件人邮箱' },
+                                                { type: 'email', message: '请输入有效的邮箱地址' }
+                                            ]}
+                                            tooltip="用于发送告警邮件的邮箱地址"
+                                        >
+                                            <Input placeholder="your-email@example.com" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="邮箱密码/授权码"
+                                            name="emailPassword"
+                                            rules={[{ required: true, message: '请输入邮箱密码或授权码' }]}
+                                            tooltip="某些邮件服务商（如 Gmail、QQ 邮箱）需要使用授权码而非密码"
+                                        >
+                                            <Input.Password placeholder="输入邮箱密码或授权码" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="收件人邮箱"
+                                            name="emailToEmail"
+                                            rules={[
+                                                { required: true, message: '请输入收件人邮箱' },
+                                                { type: 'email', message: '请输入有效的邮箱地址' }
+                                            ]}
+                                            tooltip="接收告警邮件的邮箱地址"
+                                        >
+                                            <Input placeholder="receiver@example.com" />
+                                        </Form.Item>
+                                        <Form.Item
+                                            label="邮件主题"
+                                            name="emailSubject"
+                                            tooltip="告警邮件的主题，默认为 'Pika 告警通知'"
+                                        >
+                                            <Input placeholder="Pika 告警通知" />
+                                        </Form.Item>
+                                    </>
+                                ) : null
+                            }
+                        </Form.Item>
+                    </Card>
+
                     {/* 自定义 Webhook */}
                     <Card
                         title="自定义 Webhook"
@@ -360,7 +567,7 @@ const NotificationChannels = () => {
                                 icon={<TestTube size={14} />}
                                 onClick={() => handleTest('webhook')}
                                 loading={testMutation.isPending}
-                                disabled={!form.getFieldValue('webhookEnabled')}
+                                disabled={!webhookEnabled}
                             >
                                 测试
                             </Button>
