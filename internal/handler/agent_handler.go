@@ -672,34 +672,6 @@ func (h *AgentHandler) GetStatistics(c echo.Context) error {
 	return orz.Ok(c, stats)
 }
 
-// GetMonitorMetrics 获取监控指标数据
-func (h *AgentHandler) GetMonitorMetrics(c echo.Context) error {
-	agentID := c.Param("id")
-	monitorName := c.QueryParam("name")
-	rangeParam := c.QueryParam("range")
-	ctx := c.Request().Context()
-
-	// 解析时间范围
-	start, end, err := parseTimeRange(rangeParam)
-	if err != nil {
-		return orz.NewError(400, err.Error())
-	}
-
-	metrics, err := h.agentService.GetMonitorMetrics(ctx, agentID, monitorName, start, end)
-	if err != nil {
-		return err
-	}
-
-	return orz.Ok(c, orz.Map{
-		"agentId": agentID,
-		"name":    monitorName,
-		"range":   rangeParam,
-		"start":   start,
-		"end":     end,
-		"metrics": metrics,
-	})
-}
-
 // Delete 删除探针
 func (h *AgentHandler) Delete(c echo.Context) error {
 	agentID := c.Param("id")

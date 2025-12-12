@@ -352,20 +352,6 @@ func (s *MetricService) GetLatestMetrics(ctx context.Context, agentID string) (*
 	return metrics, nil
 }
 
-// GetMonitorMetrics 获取监控指标历史数据
-// TODO: 需要重写为从 VictoriaMetrics 查询
-func (s *MetricService) GetMonitorMetrics(ctx context.Context, agentID, monitorName string, start, end int64) ([]MonitorMetric, error) {
-	// 暂时返回空数据，后续从 VictoriaMetrics 查询
-	return []MonitorMetric{}, nil
-}
-
-// GetMonitorMetricsByName 获取指定监控项的历史数据
-// TODO: 需要重写为从 VictoriaMetrics 查询
-func (s *MetricService) GetMonitorMetricsByName(ctx context.Context, agentID, monitorName string, start, end int64, limit int) ([]MonitorMetric, error) {
-	// 暂时返回空数据，后续从 VictoriaMetrics 查询
-	return []MonitorMetric{}, nil
-}
-
 // DeleteAgentMetrics 删除探针的所有指标数据
 func (s *MetricService) DeleteAgentMetrics(ctx context.Context, agentID string) error {
 	// 1. 删除 PostgreSQL 中的主机信息

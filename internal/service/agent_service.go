@@ -328,16 +328,6 @@ func (s *AgentService) GetStatistics(ctx context.Context) (map[string]interface{
 	}, nil
 }
 
-// GetMonitorMetrics 获取监控指标历史数据
-func (s *AgentService) GetMonitorMetrics(ctx context.Context, agentID, monitorName string, start, end int64) ([]MonitorMetric, error) {
-	return s.metricService.GetMonitorMetrics(ctx, agentID, monitorName, start, end)
-}
-
-// GetMonitorMetricsByName 获取指定监控项的历史数据
-func (s *AgentService) GetMonitorMetricsByName(ctx context.Context, agentID, monitorName string, start, end int64, limit int) ([]MonitorMetric, error) {
-	return s.metricService.GetMonitorMetricsByName(ctx, agentID, monitorName, start, end, limit)
-}
-
 // DeleteAgent 删除探针及其所有相关数据
 func (s *AgentService) DeleteAgent(ctx context.Context, agentID string) error {
 	// 在事务中执行所有删除操作
