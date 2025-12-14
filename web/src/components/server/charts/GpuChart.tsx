@@ -24,13 +24,13 @@ export const GpuChart = ({agentId, timeRange}: GpuChartProps) => {
 
     // 数据转换
     const chartData = useMemo(() => {
-        if (!metricsResponse?.data.series || metricsResponse.data.series.length === 0) return [];
+        if (!metricsResponse?.data.series || metricsResponse.data.series?.length === 0) return [];
 
         // 按时间戳聚合利用率和温度系列
         const timeMap = new Map<number, any>();
 
-        const utilizationSeries = metricsResponse.data.series.find(s => s.name === 'utilization');
-        const temperatureSeries = metricsResponse.data.series.find(s => s.name === 'temperature');
+        const utilizationSeries = metricsResponse.data.series?.find(s => s.name === 'utilization');
+        const temperatureSeries = metricsResponse.data.series?.find(s => s.name === 'temperature');
 
         // 添加利用率数据
         utilizationSeries?.data.forEach(point => {

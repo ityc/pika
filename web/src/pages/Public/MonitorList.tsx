@@ -80,13 +80,13 @@ const MonitorCard = ({monitor, displayMode, onClick}: {
 
     // 将 VictoriaMetrics 的时序数据转换为图表数据
     const chartData = useMemo(() => {
-        if (!historyData || !historyData.series || historyData.series.length === 0) {
+        if (!historyData || !historyData.series || historyData.series?.length === 0) {
             return [];
         }
 
         const timeMap = new Map<number, number[]>();
 
-        historyData.series.forEach(series => {
+        historyData.series?.forEach(series => {
             if (series.data && series.data.length > 0) {
                 series.data.forEach(point => {
                     if (!timeMap.has(point.timestamp)) {

@@ -23,10 +23,10 @@ export const DiskIOChart = ({agentId, timeRange}: DiskIOChartProps) => {
 
     // 数据转换
     const chartData = useMemo(() => {
-        if (!metricsResponse?.data.series || metricsResponse.data.series.length === 0) return [];
+        if (!metricsResponse?.data.series || metricsResponse.data.series?.length === 0) return [];
 
-        const readSeries = metricsResponse.data.series.find(s => s.name === 'read');
-        const writeSeries = metricsResponse.data.series.find(s => s.name === 'write');
+        const readSeries = metricsResponse.data.series?.find(s => s.name === 'read');
+        const writeSeries = metricsResponse.data.series?.find(s => s.name === 'write');
 
         if (!readSeries || !writeSeries) return [];
 

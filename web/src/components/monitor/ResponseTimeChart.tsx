@@ -116,7 +116,7 @@ export const ResponseTimeChart = ({monitorId, monitorStats}: ResponseTimeChartPr
         if (!historyData?.series) return [];
 
         // 过滤出响应时间指标的 series
-        const responseTimeSeries = historyData.series.filter(s => s.name === 'response_time');
+        const responseTimeSeries = historyData.series?.filter(s => s.name === 'response_time');
 
         // 根据选择的探针过滤（使用 agent_name，如果没有则fallback到 agent_id）
         const filteredSeries = selectedAgent === 'all'

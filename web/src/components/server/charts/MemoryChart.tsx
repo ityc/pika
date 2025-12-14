@@ -23,7 +23,7 @@ export const MemoryChart = ({agentId, timeRange}: MemoryChartProps) => {
 
     // 数据转换
     const chartData = useMemo(() => {
-        const memorySeries = metricsResponse?.data.series.find(s => s.name === 'usage');
+        const memorySeries = metricsResponse?.data.series?.find(s => s.name === 'usage');
         if (!memorySeries) return [];
 
         return memorySeries.data.map((point) => ({

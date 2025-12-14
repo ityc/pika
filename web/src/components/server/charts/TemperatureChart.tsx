@@ -27,12 +27,12 @@ export const TemperatureChart = ({agentId, timeRange}: TemperatureChartProps) =>
 
     // 数据转换
     const chartData = useMemo(() => {
-        if (!metricsResponse?.data.series || metricsResponse.data.series.length === 0) return [];
+        if (!metricsResponse?.data.series || metricsResponse.data.series?.length === 0) return [];
 
         // 按时间戳聚合所有温度系列
         const timeMap = new Map<number, any>();
 
-        metricsResponse.data.series.forEach(series => {
+        metricsResponse.data.series?.forEach(series => {
             const sensorName = series.name; // 使用系列名称作为传感器标识
             series.data.forEach(point => {
                 const time = new Date(point.timestamp).toLocaleTimeString('zh-CN', {
@@ -54,7 +54,7 @@ export const TemperatureChart = ({agentId, timeRange}: TemperatureChartProps) =>
 
     // 提取所有唯一的温度类型
     const temperatureTypes = useMemo(() => {
-        return metricsResponse?.data.series.map(s => s.name).sort() || [];
+        return metricsResponse?.data.series?.map(s => s.name).sort() || [];
     }, [metricsResponse]);
 
     // 根据选中的类型过滤温度数据

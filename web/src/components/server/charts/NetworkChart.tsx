@@ -41,10 +41,10 @@ export const NetworkChart = ({agentId, timeRange}: NetworkChartProps) => {
 
     // 数据转换
     const chartData = useMemo(() => {
-        if (!metricsResponse?.data.series || metricsResponse.data.series.length === 0) return [];
+        if (!metricsResponse?.data.series || metricsResponse.data.series?.length === 0) return [];
 
-        const uploadSeries = metricsResponse.data.series.find(s => s.name === 'upload');
-        const downloadSeries = metricsResponse.data.series.find(s => s.name === 'download');
+        const uploadSeries = metricsResponse.data.series?.find(s => s.name === 'upload');
+        const downloadSeries = metricsResponse.data.series?.find(s => s.name === 'download');
 
         if (!uploadSeries || !downloadSeries) return [];
 

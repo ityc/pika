@@ -23,12 +23,12 @@ export const NetworkConnectionChart = ({agentId, timeRange}: NetworkConnectionCh
 
     // 数据转换
     const chartData = useMemo(() => {
-        if (!metricsResponse?.data.series || metricsResponse.data.series.length === 0) return [];
+        if (!metricsResponse?.data.series || metricsResponse.data.series?.length === 0) return [];
 
         // 按时间戳聚合所有连接状态系列
         const timeMap = new Map<number, any>();
 
-        metricsResponse.data.series.forEach(series => {
+        metricsResponse.data.series?.forEach(series => {
             const stateName = series.name; // established, time_wait, close_wait, listen
             series.data.forEach(point => {
                 const time = new Date(point.timestamp).toLocaleTimeString('zh-CN', {

@@ -63,10 +63,10 @@ const PublicHeader = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 uppercase italic">
-                                {window.SystemConfig?.SystemNameZh}
+                                {window.SystemConfig?.SystemNameEn}
                             </h1>
                             <p className="text-[10px] text-cyan-500/60 font-mono tracking-[0.3em] uppercase">
-                                {window.SystemConfig?.SystemNameEn}
+                                {window.SystemConfig?.SystemNameZh}
                             </p>
                         </div>
                     </div>

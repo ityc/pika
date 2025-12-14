@@ -23,7 +23,7 @@ export const CpuChart = ({agentId, timeRange}: CpuChartProps) => {
 
     // 数据转换
     const chartData = useMemo(() => {
-        const cpuSeries = metricsResponse?.data.series.find(s => s.name === 'usage');
+        const cpuSeries = metricsResponse?.data.series?.find(s => s.name === 'usage');
         if (!cpuSeries) return [];
 
         return cpuSeries.data.map((point) => ({

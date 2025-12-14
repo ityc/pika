@@ -21,6 +21,7 @@ import (
 	"github.com/dushixiang/pika/pkg/version"
 	"github.com/gorilla/websocket"
 	"github.com/jpillora/backoff"
+	"github.com/sourcegraph/conc"
 )
 
 // 定义特殊错误类型
@@ -193,35 +194,36 @@ func (a *Agent) runOnce(ctx context.Context, onConnected func()) error {
 	done := make(chan struct{})
 	errChan := make(chan error, 3)
 
+	var wg conc.WaitGroup
 	// 启动读取循环（处理服务端的 Ping/Pong 等控制消息）
-	go func() {
+	wg.Go(func() {
 		if err := a.readLoop(rawConn, done); err != nil {
 			errChan <- fmt.Errorf("读取失败: %w", err)
 		}
-	}()
+	})
 
 	// 启动心跳和数据发送
-	go func() {
+	wg.Go(func() {
 		if err := a.heartbeatLoop(ctx, conn, done); err != nil {
 			errChan <- fmt.Errorf("心跳失败: %w", err)
 		}
-	}()
+	})
 
-	go func() {
+	wg.Go(func() {
 		if err := a.metricsLoop(ctx, conn, collectorManager, done); err != nil {
 			errChan <- fmt.Errorf("数据采集失败: %w", err)
 		}
-	}()
+	})
 
 	// 启动防篡改事件监控
-	go func() {
+	wg.Go(func() {
 		a.tamperEventLoop(ctx, conn, done)
-	}()
+	})
 
 	// 启动防篡改属性告警监控
-	go func() {
+	wg.Go(func() {
 		a.tamperAlertLoop(ctx, conn, done)
-	}()
+	})
 
 	// 等待错误或上下文取消
 	select {
