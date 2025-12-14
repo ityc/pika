@@ -308,6 +308,21 @@ export interface PublicMonitor {
     lastCheckTime: number;
 }
 
+// 探针监控统计
+export interface AgentMonitorStat {
+    agentId: string;
+    monitorId: string;
+    type: string;
+    target: string;
+    status: string;
+    statusCode: number;
+    responseTime: number;
+    checkedAt: number;
+    message: string;
+    certExpiryTime: number;
+    certDaysLeft: number;
+}
+
 // 监控详情（整合版）
 export interface MonitorDetail {
     id: string;

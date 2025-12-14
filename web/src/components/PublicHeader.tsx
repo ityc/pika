@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {Activity, Hexagon, LogIn, ServerIcon, Settings} from 'lucide-react';
+import {Activity, LogIn, ServerIcon, Settings} from 'lucide-react';
 import {getCurrentUser} from '../api/auth';
 import {Link, useLocation} from "react-router-dom";
 
@@ -41,13 +41,9 @@ const PublicHeader = () => {
     const currentPath = location.pathname;
 
     let activeTab = 'servers';
-    switch (currentPath) {
-        case '/':
-            activeTab = 'servers';
-            break;
-        case '/monitors':
-            activeTab = 'monitors';
-            break;
+
+    if (currentPath.startsWith('/monitors')) {
+        activeTab = 'monitors';
     }
 
     return (

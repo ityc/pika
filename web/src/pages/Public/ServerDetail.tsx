@@ -1,19 +1,6 @@
-import React, {type ReactNode, useEffect, useMemo, useState} from 'react';
+import {type ReactNode, useEffect, useMemo, useState} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
-import {
-    ArrowLeft,
-    Cpu,
-    Database,
-    HardDrive,
-    Loader2,
-    MemoryStick,
-    Network,
-    Server,
-    Thermometer,
-    TrendingUp,
-    Zap
-} from 'lucide-react';
-import type {TooltipProps} from 'recharts';
+import {ArrowLeft, Cpu, Database, HardDrive, MemoryStick, Network, Server, Thermometer, Zap} from 'lucide-react';
 import {
     Area,
     AreaChart,
@@ -26,482 +13,31 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import {
-    getAgent,
-    getAgentLatestMetrics,
-    getAgentMetrics,
-    type GetAgentMetricsRequest,
-    type GetAgentMetricsResponse,
-    type MetricSeries,
-    type MetricDataPoint,
-    getAvailableNetworkInterfaces,
-} from '@/api/agent.ts';
-import {type TimeRangeOption} from '@/api/property.ts';
-import type {
-    Agent,
-    LatestMetrics
-} from '@/types';
-import dayjs from "dayjs";
+import {getAvailableNetworkInterfaces} from '@/api/agent.ts';
 import {cn} from '@/lib/utils';
+// 工具函数
+import {formatBytes, formatDateTime, formatPercentValue, formatUptime} from '@/utils/util';
+// Hooks
+import {useAgentOverview, useAggregatedMetrics} from '@/hooks/server';
+// 常量
+import {INTERFACE_COLORS, TEMPERATURE_COLORS} from '@/constants/server';
+import {SERVER_TIME_RANGE_OPTIONS} from '@/constants/time';
+// 公共组件
+import {
+    Card,
+    ChartPlaceholder,
+    CustomTooltip,
+    EmptyState,
+    LoadingSpinner,
+    TimeRangeSelector
+} from '@/components/common';
+// 服务器组件
+import {InfoGrid, type SnapshotCardData, SnapshotSection} from '@/components/server';
+import LittleStatCard from "@/components/common/LittleStatCard.tsx";
 
-const formatBytes = (bytes: number | undefined | null): string => {
-    if (!bytes || bytes <= 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-};
-
-const formatPercentValue = (value: number | undefined | null): string => {
-    if (value === undefined || value === null || Number.isNaN(value)) return '0.0';
-    return value.toFixed(1);
-};
-
-const formatUptime = (seconds: number | undefined | null): string => {
-    if (seconds === undefined || seconds === null) return '-';
-    if (seconds <= 0) return '0 秒';
-
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    const parts: string[] = [];
-
-    // 智能显示：只显示最重要的两个单位，避免文本过长
-    if (days > 0) {
-        parts.push(`${days} 天`);
-        if (hours > 0) parts.push(`${hours} 小时`);
-    } else if (hours > 0) {
-        parts.push(`${hours} 小时`);
-        if (minutes > 0) parts.push(`${minutes} 分钟`);
-    } else if (minutes > 0) {
-        parts.push(`${minutes} 分钟`);
-    }
-
-    return parts.length > 0 ? parts.join(' ') : '不到 1 分钟';
-};
-
-const formatDateTime = (value: string | number | undefined | null): string => {
-    if (value === undefined || value === null || value === '') {
-        return '-';
-    }
-
-    return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
-};
-
-// 网卡颜色配置（上行和下行使用不同的色调）
-const INTERFACE_COLORS = [
-    {upload: '#6FD598', download: '#2C70F6'}, // 绿/蓝
-    {upload: '#f59e0b', download: '#8b5cf6'}, // 橙/紫
-    {upload: '#ec4899', download: '#06b6d4'}, // 粉/青
-    {upload: '#10b981', download: '#f97316'}, // 翠绿/深橙
-    {upload: '#14b8a6', download: '#2563eb'}, // 青绿/深蓝
-];
-
-const LoadingSpinner = () => (
-    <div className="flex min-h-screen items-center justify-center bg-[#05050a]">
-        <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-cyan-400"/>
-            <p className="text-sm text-cyan-500 font-mono">数据加载中...</p>
-        </div>
-    </div>
-);
-
-const EmptyState = ({message = '服务器不存在或已离线'}: { message?: string }) => (
-    <div className="flex min-h-screen items-center justify-center bg-[#05050a]">
-        <div className="flex flex-col items-center gap-3 text-center">
-            <div
-                className="flex h-16 w-16 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
-                <Server className="h-8 w-8"/>
-            </div>
-            <p className="text-sm text-cyan-600 font-mono">{message}</p>
-        </div>
-    </div>
-);
-
-const ChartPlaceholder = ({
-                              icon: Icon = TrendingUp,
-                              title = '暂无数据',
-                              subtitle = '等待采集新数据后展示图表',
-                              heightClass = 'h-52',
-                          }: {
-    icon?: typeof TrendingUp;
-    title?: string;
-    subtitle?: string;
-    heightClass?: string;
-}) => (
-    <div
-        className={cn(
-            "flex items-center justify-center rounded-lg border border-dashed border-cyan-500/30 bg-[#0a0b10]/50 text-sm text-cyan-600 font-mono",
-            heightClass
-        )}
-    >
-        <div className="text-center">
-            <Icon className="mx-auto mb-3 h-10 w-10 text-cyan-900/50"/>
-            <p className="uppercase tracking-wider">{title}</p>
-            {subtitle ? <p className="mt-1 text-xs text-cyan-800">{subtitle}</p> : null}
-        </div>
-    </div>
-);
-
-const Card = ({
-                  title,
-                  description,
-                  action,
-                  children,
-              }: {
-    title?: string;
-    description?: string;
-    action?: ReactNode;
-    children: ReactNode;
-}) => (
-    <section
-        className="rounded-2xl border border-cyan-900/50 bg-[#0a0b10]/90 p-6 shadow-2xl backdrop-blur-sm">
-        {(title || description || action) && (
-            <div
-                className="flex flex-col gap-3 border-b border-cyan-900/30 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    {title ?
-                        <h2 className="text-sm font-bold font-mono uppercase tracking-widest text-cyan-400">{title}</h2> : null}
-                    {description ?
-                        <p className="mt-1 text-xs text-cyan-600">{description}</p> : null}
-                </div>
-                {action ? <div className="shrink-0">{action}</div> : null}
-            </div>
-        )}
-        <div className="pt-4">{children}</div>
-    </section>
-);
 
 type AccentVariant = 'blue' | 'emerald' | 'purple' | 'amber';
 
-const accentThemes: Record<AccentVariant, { icon: string; badge: string; highlight: string }> = {
-    blue: {
-        icon: 'text-blue-400',
-        badge: 'text-blue-400',
-        highlight: 'text-blue-400',
-    },
-    emerald: {
-        icon: 'text-emerald-400',
-        badge: 'text-emerald-400',
-        highlight: 'text-emerald-400',
-    },
-    purple: {
-        icon: 'text-purple-400',
-        badge: 'text-purple-400',
-        highlight: 'text-purple-400',
-    },
-    amber: {
-        icon: 'text-amber-400',
-        badge: 'text-amber-400',
-        highlight: 'text-amber-400',
-    },
-};
-
-const InfoGrid = ({items}: { items: Array<{ label: string; value: ReactNode }> }) => (
-    <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-        {items.map((item) => (
-            <div key={item.label}>
-                <dt className="text-[10px] font-mono uppercase tracking-widest text-cyan-600">{item.label}</dt>
-                <dd className="mt-1 font-medium text-cyan-100">{item.value}</dd>
-            </div>
-        ))}
-    </dl>
-);
-
-const TimeRangeSelector = ({
-                               value,
-                               onChange,
-                               options,
-                           }: {
-    value: string;
-    onChange: (value: string) => void;
-    options: TimeRangeOption[];
-}) => (
-    <div className="flex flex-wrap items-center gap-2">
-        {options.map((option) => {
-            const isActive = option.value === value;
-            return (
-                <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => onChange(option.value)}
-                    className={cn(
-                        "rounded-lg border px-3 py-1.5 text-xs font-bold font-mono tracking-wider uppercase transition whitespace-nowrap",
-                        isActive
-                            ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.3)]'
-                            : 'border-cyan-900/30 bg-black/30 text-cyan-700 hover:text-cyan-400 hover:border-cyan-700'
-                    )}
-                >
-                    {option.label}
-                </button>
-            );
-        })}
-    </div>
-);
-
-type MetricsTooltipProps = TooltipProps<number, string> & { unit?: string, label?: string, payload?: any[] };
-
-// 新的统一 Metrics 状态类型
-type MetricsState = {
-    cpu: MetricSeries[];
-    memory: MetricSeries[];
-    network: MetricSeries[];
-    networkConnection: MetricSeries[];
-    diskIO: MetricSeries[];
-    gpu: MetricSeries[];
-    temperature: MetricSeries[];
-};
-
-const createEmptyMetricsState = (): MetricsState => ({
-    cpu: [],
-    memory: [],
-    network: [],
-    networkConnection: [],
-    diskIO: [],
-    gpu: [],
-    temperature: [],
-});
-
-const metricRequestConfig: Array<{ key: keyof MetricsState; type: GetAgentMetricsRequest['type'] }> = [
-    {key: 'cpu', type: 'cpu'},
-    {key: 'memory', type: 'memory'},
-    {key: 'network', type: 'network'},
-    {key: 'networkConnection', type: 'network_connection'},
-    // {key: 'disk', type: 'disk'},
-    {key: 'diskIO', type: 'disk_io'},
-    {key: 'gpu', type: 'gpu'},
-    {key: 'temperature', type: 'temperature'},
-];
-
-const useAgentOverview = (agentId?: string) => {
-    const [agent, setAgent] = useState<Agent | null>(null);
-    const [latestMetrics, setLatestMetrics] = useState<LatestMetrics | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        if (!agentId) {
-            setAgent(null);
-            setLatestMetrics(null);
-            setLoading(false);
-            return;
-        }
-
-        const fetchAgent = async () => {
-            setLoading(true);
-            try {
-                const [agentRes, latestRes] = await Promise.all([getAgent(agentId), getAgentLatestMetrics(agentId)]);
-                if (!cancelled) {
-                    setAgent(agentRes.data);
-                    setLatestMetrics(latestRes.data);
-                }
-            } catch (error) {
-                console.error('Failed to load agent details:', error);
-            } finally {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        fetchAgent();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [agentId]);
-
-    useEffect(() => {
-        if (!agentId) return;
-
-        let cancelled = false;
-
-        const refreshLatest = async () => {
-            try {
-                const latestRes = await getAgentLatestMetrics(agentId);
-                if (!cancelled) {
-                    setLatestMetrics(latestRes.data);
-                }
-            } catch (error) {
-                console.error('Failed to refresh latest metrics:', error);
-            }
-        };
-
-        const timer = setInterval(refreshLatest, 5000);
-        return () => {
-            cancelled = true;
-            clearInterval(timer);
-        };
-    }, [agentId]);
-
-    return {agent, latestMetrics, loading};
-};
-
-const useAggregatedMetrics = (agentId: string | undefined, range: string, interfaceName?: string) => {
-    const [metrics, setMetrics] = useState<MetricsState>(() => createEmptyMetricsState());
-
-    useEffect(() => {
-        if (!agentId) {
-            setMetrics(createEmptyMetricsState());
-            return;
-        }
-
-        let cancelled = false;
-
-        const fetchMetrics = async () => {
-            try {
-                const responses = await Promise.all(
-                    metricRequestConfig.map(({type}) => {
-                        // 只有 network 类型才需要传递 interface 参数
-                        const params: GetAgentMetricsRequest = {agentId, type, range};
-                        if (type === 'network' && interfaceName && interfaceName !== 'all') {
-                            params.interface = interfaceName;
-                        }
-                        return getAgentMetrics(params);
-                    }),
-                );
-                if (cancelled) return;
-                const nextState = createEmptyMetricsState();
-                metricRequestConfig.forEach(({key}, index) => {
-                    // 新的 API 返回 series 数组
-                    nextState[key] = responses[index].data.series || [];
-                });
-                setMetrics(nextState);
-            } catch (error) {
-                console.error('Failed to load metrics:', error);
-            }
-        };
-
-        fetchMetrics();
-        const timer = setInterval(fetchMetrics, 30000);
-        return () => {
-            cancelled = true;
-            clearInterval(timer);
-        };
-    }, [agentId, range, interfaceName]);
-
-    return metrics;
-};
-
-
-type SnapshotCardData = {
-    key: string;
-    icon: typeof Cpu;
-    title: string;
-    usagePercent: string;
-    accent: AccentVariant;
-    metrics: Array<{ label: string; value: ReactNode }>;
-};
-
-const SnapshotGrid = ({cards}: { cards: SnapshotCardData[] }) => (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => {
-            const theme = accentThemes[card.accent];
-            return (
-                <div
-                    key={card.key}
-                    className="rounded-xl border border-cyan-900/50 bg-black/40 p-4 transition hover:-translate-y-0.5 hover:border-cyan-700/50"
-                >
-                    <div className="mb-3 flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500/10", theme.icon)}>
-                                <card.icon className="h-4 w-4"/>
-                            </span>
-                            <p className="text-xs font-bold font-mono uppercase tracking-wider text-cyan-300">{card.title}</p>
-                        </div>
-                        <span className={cn("text-xl font-bold", theme.highlight)}>{card.usagePercent}</span>
-                    </div>
-                    <div className="space-y-2">
-                        {card.metrics.map((metric) => (
-                            <div key={metric.label} className="flex items-center justify-between text-xs">
-                                <span className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">{metric.label}</span>
-                                <span
-                                    className="ml-2 text-right font-medium text-cyan-200">{metric.value}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        })}
-    </div>
-);
-
-const SnapshotSection = ({cards}: { cards: SnapshotCardData[] }) => {
-    if (cards.length === 0) {
-        return null;
-    }
-    return (
-        <div className="space-y-4">
-            <div>
-                <h3 className="text-xs font-bold font-mono uppercase tracking-widest text-cyan-500">资源快照</h3>
-            </div>
-            <SnapshotGrid cards={cards}/>
-        </div>
-    );
-};
-
-const CustomTooltip = ({active, payload, label, unit = '%'}: MetricsTooltipProps) => {
-    if (!active || !payload || payload.length === 0) {
-        return null;
-    }
-
-    // 从 payload 中获取完整的时间戳信息（如果有的话）
-    const fullTimestamp = payload[0]?.payload?.timestamp;
-    const displayLabel = fullTimestamp
-        ? dayjs(fullTimestamp).format('YYYY-MM-DD HH:mm:ss')
-        : label;
-
-    return (
-        <div
-            className="rounded-lg border border-cyan-700/50 bg-[#0a0b10]/95 backdrop-blur-sm px-3 py-2 text-xs shadow-xl">
-            <p className="font-semibold font-mono text-cyan-300 text-[10px] tracking-wider uppercase">{displayLabel}</p>
-            <div className="mt-1 space-y-1">
-                {payload.map((entry, index) => {
-                    if (!entry) {
-                        return null;
-                    }
-
-                    const dotColor = entry.color ?? '#6366f1';
-                    const title = entry.name ?? entry.dataKey ?? `系列 ${index + 1}`;
-                    const value =
-                        typeof entry.value === 'number'
-                            ? Number.isFinite(entry.value)
-                                ? entry.value.toFixed(2)
-                                : '-'
-                            : entry.value;
-
-                    return (
-                        <p key={`${entry.dataKey ?? index}`}
-                           className="flex items-center gap-2 text-cyan-400">
-                        <span
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{backgroundColor: dotColor}}
-                        />
-                            <span>
-                                {title}: {value}
-                                {unit}
-                            </span>
-                        </p>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-const timeRangeOptions = [
-    {label: '15分钟', value: '15m'},
-    {label: '30分钟', value: '30m'},
-    {label: '1小时', value: '1h'},
-    {label: '3小时', value: '3h'},
-    {label: '6小时', value: '6h'},
-    {label: '12小时', value: '12h'},
-    {label: '1天', value: '1d'},
-    {label: '3天', value: '3d'},
-    {label: '7天', value: '7d'},
-]
 
 const ServerDetail = () => {
     const {id} = useParams<{ id: string }>();
@@ -765,17 +301,6 @@ const ServerDetail = () => {
         }
     }, [temperatureTypes, selectedTempType]);
 
-    // 温度类型颜色映射
-    const temperatureColors: Record<string, string> = {
-        'CPU': '#f97316',      // 橙色
-        'GPU': '#8b5cf6',      // 紫色
-        'DISK': '#06b6d4',     // 青色
-        'BATTERY': '#10b981',  // 绿色
-        'CHIPSET': '#f59e0b',  // 琥珀色
-        'SYSTEM': '#6366f1',   // 靛蓝色
-        'PSU': '#ec4899',      // 粉色
-    };
-
     const snapshotCards: SnapshotCardData[] = useMemo(() => {
         if (!latestMetrics) {
             return [] as Array<{
@@ -949,17 +474,18 @@ const ServerDetail = () => {
     ];
 
     if (loading) {
-        return <LoadingSpinner/>;
+        return <LoadingSpinner variant="dark"/>;
     }
 
     if (!agent) {
-        return <EmptyState/>;
+        return <EmptyState variant="dark"/>;
     }
 
     return (
         <div className="bg-[#05050a] min-h-screen">
             <div className="mx-auto flex max-w-7xl flex-col px-4 pb-10 pt-6 sm:px-6 lg:px-8">
-                <section className="rounded-2xl border border-cyan-900/50 bg-[#0a0b10]/90 p-6 shadow-2xl backdrop-blur-sm">
+                <section
+                    className="rounded-2xl border border-cyan-900/50 bg-[#0a0b10]/90 p-6 shadow-2xl backdrop-blur-sm">
                     <div className="flex flex-col gap-6">
                         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                             <div className="space-y-4">
@@ -1000,17 +526,12 @@ const ServerDetail = () => {
 
                             <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:grid-cols-2 xl:grid-cols-4">
                                 {heroStats.map((stat) => (
-                                    <div
-                                        key={stat.label}
-                                        className="rounded-xl bg-black/40 border border-cyan-900/50 p-4 text-left hover:border-cyan-700/50 transition"
-                                    >
-                                        <p className="text-[10px] uppercase tracking-[0.3em] text-cyan-600 font-mono font-bold">{stat.label}</p>
-                                        <p className="mt-2 text-base font-semibold text-cyan-100">{stat.value}</p>
-                                    </div>
+                                    <LittleStatCard label={stat.label} value={stat.value}/>
                                 ))}
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-cyan-600 font-mono pt-4 border-t border-cyan-900/30">
+                        <div
+                            className="flex flex-wrap items-center gap-3 text-xs text-cyan-600 font-mono pt-4 border-t border-cyan-900/30">
                             <span>探针 ID：{agent.id}</span>
                             <span className="hidden h-1 w-1 rounded-full bg-cyan-900 sm:inline-block"/>
                             <span>版本：{agent.version || '-'}</span>
@@ -1021,7 +542,7 @@ const ServerDetail = () => {
                 </section>
 
                 <main className="flex-1 py-10 space-y-10">
-                    <Card title="系统信息" description="探针基础属性、运行状态与资源概览">
+                    <Card title="系统信息" description="探针基础属性、运行状态与资源概览" variant="dark">
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 <div
@@ -1048,33 +569,44 @@ const ServerDetail = () => {
                                     <p className="mt-1 text-[10px] text-cyan-700">TCP 连接各状态的实时统计数据</p>
                                     <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                                         <div className="text-center">
-                                            <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">Total</div>
+                                            <div
+                                                className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">Total
+                                            </div>
                                             <div
                                                 className="mt-1 text-lg font-semibold text-cyan-100">{latestMetrics.networkConnection.total}</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">ESTABLISHED
+                                            <div
+                                                className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">ESTABLISHED
                                             </div>
                                             <div
                                                 className="mt-1 text-lg font-semibold text-emerald-400">{latestMetrics.networkConnection.established}</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">TIME_WAIT</div>
+                                            <div
+                                                className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">TIME_WAIT
+                                            </div>
                                             <div
                                                 className="mt-1 text-lg font-semibold text-amber-400">{latestMetrics.networkConnection.timeWait}</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">LISTEN</div>
+                                            <div
+                                                className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">LISTEN
+                                            </div>
                                             <div
                                                 className="mt-1 text-lg font-semibold text-blue-400">{latestMetrics.networkConnection.listen}</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">CLOSE_WAIT</div>
+                                            <div
+                                                className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">CLOSE_WAIT
+                                            </div>
                                             <div
                                                 className="mt-1 text-lg font-semibold text-rose-400">{latestMetrics.networkConnection.closeWait}</div>
                                         </div>
                                         <div className="text-center">
-                                            <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">OTHER</div>
+                                            <div
+                                                className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">OTHER
+                                            </div>
                                             <div
                                                 className="mt-1 text-lg font-semibold text-cyan-500">
                                                 {latestMetrics.networkConnection.synSent +
@@ -1096,8 +628,9 @@ const ServerDetail = () => {
                     <Card
                         title="历史趋势"
                         description="针对选定时间范围展示 CPU、内存与网络的变化趋势"
+                        variant="dark"
                         action={<TimeRangeSelector value={timeRange} onChange={setTimeRange}
-                                                   options={timeRangeOptions}/>}
+                                                   options={SERVER_TIME_RANGE_OPTIONS} variant="dark"/>}
                     >
                         <div className="grid gap-6 md:grid-cols-2">
                             <section>
@@ -1132,7 +665,7 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value}%`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit="%"/>}/>
+                                            <Tooltip content={<CustomTooltip unit="%" variant="dark"/>}/>
                                             <Area
                                                 type="monotone"
                                                 dataKey="usage"
@@ -1145,7 +678,7 @@ const ServerDetail = () => {
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <ChartPlaceholder/>
+                                    <ChartPlaceholder variant="dark"/>
                                 )}
                             </section>
 
@@ -1181,7 +714,7 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value}%`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit="%"/>}/>
+                                            <Tooltip content={<CustomTooltip unit="%" variant="dark"/>}/>
                                             <Area
                                                 type="monotone"
                                                 dataKey="usage"
@@ -1194,7 +727,7 @@ const ServerDetail = () => {
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <ChartPlaceholder/>
+                                    <ChartPlaceholder variant="dark"/>
                                 )}
                             </section>
 
@@ -1253,7 +786,7 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value} MB`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit=" MB/s"/>}/>
+                                            <Tooltip content={<CustomTooltip unit=" MB/s" variant="dark"/>}/>
                                             <Legend/>
                                             {/* 渲染上行和下行区域 */}
                                             <Area
@@ -1277,7 +810,7 @@ const ServerDetail = () => {
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <ChartPlaceholder subtitle="稍后再次尝试刷新网络流量"/>
+                                    <ChartPlaceholder subtitle="稍后再次尝试刷新网络流量" variant="dark"/>
                                 )}
                             </section>
 
@@ -1316,7 +849,7 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value} MB`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit=" MB"/>}/>
+                                            <Tooltip content={<CustomTooltip unit=" MB" variant="dark"/>}/>
                                             <Legend/>
                                             <Area
                                                 type="monotone"
@@ -1339,7 +872,7 @@ const ServerDetail = () => {
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <ChartPlaceholder subtitle="暂无磁盘 I/O 采集数据"/>
+                                    <ChartPlaceholder subtitle="暂无磁盘 I/O 采集数据" variant="dark"/>
                                 )}
                             </section>
 
@@ -1367,7 +900,7 @@ const ServerDetail = () => {
                                                 className="stroke-cyan-600"
                                                 style={{fontSize: '12px'}}
                                             />
-                                            <Tooltip content={<CustomTooltip unit=""/>}/>
+                                            <Tooltip content={<CustomTooltip unit="" variant="dark"/>}/>
                                             <Legend/>
                                             <Line
                                                 type="monotone"
@@ -1408,7 +941,7 @@ const ServerDetail = () => {
                                         </LineChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <ChartPlaceholder subtitle="暂无网络连接统计数据"/>
+                                    <ChartPlaceholder subtitle="暂无网络连接统计数据" variant="dark"/>
                                 )}
                             </section>
 
@@ -1446,7 +979,7 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value}°C`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit=""/>}/>
+                                            <Tooltip content={<CustomTooltip unit="" variant="dark"/>}/>
                                             <Legend/>
                                             <Line
                                                 yAxisId="left"
@@ -1514,12 +1047,12 @@ const ServerDetail = () => {
                                                 style={{fontSize: '12px'}}
                                                 tickFormatter={(value) => `${value}°C`}
                                             />
-                                            <Tooltip content={<CustomTooltip unit="°C"/>}/>
+                                            <Tooltip content={<CustomTooltip unit="°C" variant="dark"/>}/>
                                             <Legend/>
                                             {/* 为选中的温度类型渲染线条 */}
                                             {filteredTemperatureTypes.map((type, index) => {
                                                 // 使用预定义颜色，如果没有则使用默认颜色
-                                                const color = temperatureColors[type] || `hsl(${(index * 60) % 360}, 70%, 50%)`;
+                                                const color = TEMPERATURE_COLORS[type] || `hsl(${(index * 60) % 360}, 70%, 50%)`;
                                                 return (
                                                     <Line
                                                         key={type}
@@ -1544,7 +1077,7 @@ const ServerDetail = () => {
 
                     {/* GPU 监控 */}
                     {latestMetrics?.gpu && latestMetrics.gpu.length > 0 && (
-                        <Card title="GPU 监控" description="显卡使用情况和温度监控">
+                        <Card title="GPU 监控" description="显卡使用情况和温度监控" variant="dark">
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 {latestMetrics.gpu.map((gpu) => (
                                     <div
@@ -1568,23 +1101,27 @@ const ServerDetail = () => {
                                         </div>
                                         <div className="space-y-2 text-xs">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">温度</span>
+                                                <span
+                                                    className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">温度</span>
                                                 <span
                                                     className="font-medium text-cyan-200">{gpu.temperature.toFixed(1)}°C</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">显存</span>
+                                                <span
+                                                    className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">显存</span>
                                                 <span className="font-medium text-cyan-200">
                                                     {formatBytes(gpu.memoryUsed)} / {formatBytes(gpu.memoryTotal)}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">功耗</span>
+                                                <span
+                                                    className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">功耗</span>
                                                 <span
                                                     className="font-medium text-cyan-200">{gpu.powerDraw.toFixed(1)}W</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">风扇转速</span>
+                                                <span
+                                                    className="text-cyan-600 font-mono text-[10px] uppercase tracking-wider">风扇转速</span>
                                                 <span
                                                     className="font-medium text-cyan-200">{gpu.fanSpeed.toFixed(0)}%</span>
                                             </div>
@@ -1597,7 +1134,7 @@ const ServerDetail = () => {
 
                     {/* 温度监控 */}
                     {latestMetrics?.temperature && latestMetrics.temperature.length > 0 && (
-                        <Card title="温度监控" description="系统各部件温度传感器数据">
+                        <Card title="温度监控" description="系统各部件温度传感器数据" variant="dark">
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                                 {latestMetrics.temperature.sort((a, b) => a.sensorKey.localeCompare(b.sensorKey)).map((temp) => (
                                     <div

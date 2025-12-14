@@ -60,7 +60,7 @@ const CompactResourceBar = ({ value, label, subtext, icon: Icon, color = "bg-cya
                 </div>
             </div>
 
-            <div className={`font-bold text-sm ${isCritical ? 'text-rose-400' : 'text-slate-200'}`}>{value.toFixed(1)}%</div>
+            <div className={`font-medium text-xs ${isCritical ? 'text-rose-400' : 'text-slate-200'}`}>{value.toFixed(1)}%</div>
 
             {/* Value & Subtext */}
             <div className="w-28 text-right flex items-baseline justify-end gap-2 flex-shrink-0">
