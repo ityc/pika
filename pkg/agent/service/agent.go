@@ -21,6 +21,7 @@ import (
 	"github.com/dushixiang/pika/pkg/version"
 	"github.com/gorilla/websocket"
 	"github.com/jpillora/backoff"
+	"github.com/sourcegraph/conc"
 )
 
 // 定义特殊错误类型
@@ -189,57 +190,79 @@ func (a *Agent) runOnce(ctx context.Context, onConnected func()) error {
 		a.setActiveConn(nil)
 	}()
 
-	// 创建完成通道
+	// 创建完成通道和错误通道
 	done := make(chan struct{})
-	errChan := make(chan error, 3)
+	errChan := make(chan error, 1) // 只需要接收第一个错误
+
+	// 创建 WaitGroup 用于等待所有 goroutine 退出
+	var wg conc.WaitGroup
 
 	// 启动读取循环（处理服务端的 Ping/Pong 等控制消息）
-	go func() {
+	wg.Go(func() {
 		if err := a.readLoop(rawConn, done); err != nil {
-			errChan <- fmt.Errorf("读取失败: %w", err)
+			select {
+			case errChan <- fmt.Errorf("读取失败: %w", err):
+			default:
+			}
 		}
-	}()
+	})
 
 	// 启动心跳和数据发送
-	go func() {
+	wg.Go(func() {
 		if err := a.heartbeatLoop(ctx, conn, done); err != nil {
-			errChan <- fmt.Errorf("心跳失败: %w", err)
+			select {
+			case errChan <- fmt.Errorf("心跳失败: %w", err):
+			default:
+			}
 		}
-	}()
+	})
 
-	go func() {
+	// 启动指标采集循环
+	wg.Go(func() {
 		if err := a.metricsLoop(ctx, conn, collectorManager, done); err != nil {
-			errChan <- fmt.Errorf("数据采集失败: %w", err)
+			select {
+			case errChan <- fmt.Errorf("数据采集失败: %w", err):
+			default:
+			}
 		}
-	}()
+	})
 
 	// 启动防篡改事件监控
-	go func() {
+	wg.Go(func() {
 		a.tamperEventLoop(ctx, conn, done)
-	}()
+	})
 
 	// 启动防篡改属性告警监控
-	go func() {
+	wg.Go(func() {
 		a.tamperAlertLoop(ctx, conn, done)
-	}()
+	})
 
-	// 等待错误或上下文取消
+	// 等待第一个错误或上下文取消
+	var returnErr error
 	select {
 	case err := <-errChan:
-		close(done)
 		// 连接已建立，无论什么原因断开都标记为已建立状态
 		log.Printf("连接断开: %v", err)
-		return ErrConnectionEstablished
+		returnErr = ErrConnectionEstablished
 	case <-ctx.Done():
-		close(done)
-		// 优雅关闭连接
-		closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-		if err := conn.WriteMessage(websocket.CloseMessage, closeMsg); err != nil {
-			log.Printf("⚠️  关闭连接失败: %v", err)
-		}
-		time.Sleep(time.Second)
-		return ctx.Err() // 返回上下文错误
+		// 收到取消信号
+		log.Println("收到停止信号，准备关闭连接")
+		returnErr = ctx.Err()
 	}
+
+	// 关闭 done channel，通知所有 goroutine 退出
+	close(done)
+
+	// 发送 WebSocket 关闭消息
+	closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
+	if err := conn.WriteMessage(websocket.CloseMessage, closeMsg); err != nil {
+		log.Printf("⚠️  发送关闭消息失败: %v", err)
+	}
+
+	// 等待所有 goroutine 优雅退出
+	wg.Wait()
+
+	return returnErr
 }
 
 // readLoop 读取服务端消息（主要用于处理 Ping/Pong 和指令）
@@ -258,7 +281,7 @@ func (a *Agent) readLoop(conn *websocket.Conn, done chan struct{}) error {
 		}
 
 		// 解析消息
-		var msg protocol.Message
+		var msg protocol.InputMessage
 		if err := json.Unmarshal(message, &msg); err != nil {
 			log.Printf("⚠️  解析消息失败: %v", err)
 			continue
@@ -313,22 +336,15 @@ func (a *Agent) registerAgent(conn *safeConn) error {
 		ApiKey: a.cfg.Server.APIKey,
 	}
 
-	reqData, err := json.Marshal(registerReq)
-	if err != nil {
-		return fmt.Errorf("序列化注册请求失败: %w", err)
-	}
-
-	msg := protocol.Message{
+	if err := conn.WriteJSON(protocol.OutboundMessage{
 		Type: protocol.MessageTypeRegister,
-		Data: reqData,
-	}
-
-	if err := conn.WriteJSON(msg); err != nil {
+		Data: registerReq,
+	}); err != nil {
 		return fmt.Errorf("发送注册消息失败: %w", err)
 	}
 
 	// 读取注册响应
-	var response protocol.Message
+	var response protocol.InputMessage
 	if err := conn.ReadJSON(&response); err != nil {
 		return fmt.Errorf("读取注册响应失败: %w", err)
 	}
@@ -392,11 +408,10 @@ func (a *Agent) heartbeatLoop(ctx context.Context, conn *safeConn, done chan str
 	for {
 		select {
 		case <-ticker.C:
-			msg := protocol.Message{
+			if err := conn.WriteJSON(protocol.OutboundMessage{
 				Type: protocol.MessageTypeHeartbeat,
-				Data: json.RawMessage(`{}`),
-			}
-			if err := conn.WriteJSON(msg); err != nil {
+				Data: struct{}{},
+			}); err != nil {
 				return fmt.Errorf("发送心跳失败: %w", err)
 			}
 			//log.Println("💓 心跳已发送")
@@ -581,24 +596,10 @@ func (a *Agent) sendCommandResponse(conn *safeConn, cmdID, cmdType, status, errM
 		Result: result,
 	}
 
-	respData, err := json.Marshal(resp)
-	if err != nil {
-		log.Printf("⚠️  序列化指令响应失败: %v", err)
-		return
-	}
-
-	msg := protocol.Message{
+	if err := conn.WriteJSON(protocol.OutboundMessage{
 		Type: protocol.MessageTypeCommandResp,
-		Data: respData,
-	}
-
-	msgData, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("⚠️  序列化消息失败: %v", err)
-		return
-	}
-
-	if err := conn.WriteMessage(websocket.TextMessage, msgData); err != nil {
+		Data: resp,
+	}); err != nil {
 		log.Printf("⚠️  发送指令响应失败: %v", err)
 	}
 }
@@ -670,18 +671,10 @@ func (a *Agent) sendTamperProtectResponse(success bool, message string, paths []
 		Error:   errMsg,
 	}
 
-	respData, err := json.Marshal(resp)
-	if err != nil {
-		log.Printf("⚠️  序列化防篡改保护响应失败: %v", err)
-		return
-	}
-
-	msg := protocol.Message{
+	if err := conn.WriteJSON(protocol.OutboundMessage{
 		Type: protocol.MessageTypeTamperProtect,
-		Data: respData,
-	}
-
-	if err := conn.WriteJSON(msg); err != nil {
+		Data: resp,
+	}); err != nil {
 		log.Printf("⚠️  发送防篡改保护响应失败: %v", err)
 	}
 }
@@ -705,18 +698,10 @@ func (a *Agent) tamperEventLoop(ctx context.Context, conn *safeConn, done chan s
 				Details:   event.Details,
 			}
 
-			data, err := json.Marshal(eventData)
-			if err != nil {
-				log.Printf("⚠️  序列化防篡改事件失败: %v", err)
-				continue
-			}
-
-			msg := protocol.Message{
+			if err := conn.WriteJSON(protocol.OutboundMessage{
 				Type: protocol.MessageTypeTamperEvent,
-				Data: data,
-			}
-
-			if err := conn.WriteJSON(msg); err != nil {
+				Data: eventData,
+			}); err != nil {
 				log.Printf("⚠️  发送防篡改事件失败: %v", err)
 			} else {
 				log.Printf("📤 已上报防篡改事件: %s - %s", event.Path, event.Operation)
@@ -744,18 +729,10 @@ func (a *Agent) tamperAlertLoop(ctx context.Context, conn *safeConn, done chan s
 				Restored:  alert.Restored,
 			}
 
-			data, err := json.Marshal(alertData)
-			if err != nil {
-				log.Printf("⚠️  序列化属性篡改告警失败: %v", err)
-				continue
-			}
-
-			msg := protocol.Message{
+			if err := conn.WriteJSON(protocol.OutboundMessage{
 				Type: protocol.MessageTypeTamperAlert,
-				Data: data,
-			}
-
-			if err := conn.WriteJSON(msg); err != nil {
+				Data: alertData,
+			}); err != nil {
 				log.Printf("⚠️  发送属性篡改告警失败: %v", err)
 			} else {
 				status := "未恢复"
@@ -829,18 +806,10 @@ func (a *Agent) collectAndSendDDNSIP(conn *safeConn, manager *collector.Manager,
 		return fmt.Errorf("未获取到任何 IP 地址")
 	}
 
-	// 序列化并发送
-	data, err := json.Marshal(ipReport)
-	if err != nil {
-		return fmt.Errorf("序列化 IP 报告失败: %w", err)
-	}
-
-	msg := protocol.Message{
+	if err := conn.WriteJSON(protocol.OutboundMessage{
 		Type: protocol.MessageTypeDDNSIPReport,
-		Data: data,
-	}
-
-	if err := conn.WriteJSON(msg); err != nil {
+		Data: ipReport,
+	}); err != nil {
 		return fmt.Errorf("发送 IP 报告失败: %w", err)
 	}
 

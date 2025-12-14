@@ -1,8 +1,6 @@
 package collector
 
 import (
-	"encoding/json"
-
 	"github.com/dushixiang/pika/internal/protocol"
 	"github.com/dushixiang/pika/pkg/agent/config"
 )
@@ -168,44 +166,21 @@ func (m *Manager) CollectAndSendDDNSIP(conn WebSocketWriter) error {
 		return nil
 	}
 
-	dataBytes, err := json.Marshal(ipData)
-	if err != nil {
-		return err
-	}
-
-	msg := protocol.Message{
+	return conn.WriteJSON(protocol.OutboundMessage{
 		Type: protocol.MessageTypeDDNSIPReport,
-		Data: dataBytes,
-	}
-
-	return conn.WriteJSON(msg)
+		Data: ipData,
+	})
 }
 
 // sendMetrics 发送指标数据
 func (m *Manager) sendMetrics(conn WebSocketWriter, metricType protocol.MetricType, data interface{}) error {
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	//dataBytes = bytes.ReplaceAll(dataBytes, []byte{0x00}, []byte(`"`))
-
-	metrics := protocol.MetricsWrapper{
-		Type: metricType,
-		Data: json.RawMessage(dataBytes),
-	}
-
-	metricsData, err := json.Marshal(metrics)
-	if err != nil {
-		return err
-	}
-
-	msg := protocol.Message{
+	return conn.WriteJSON(protocol.OutboundMessage{
 		Type: protocol.MessageTypeMetrics,
-		Data: metricsData,
-	}
-
-	return conn.WriteJSON(msg)
+		Data: protocol.MetricsPayload{
+			Type: metricType,
+			Data: data,
+		},
+	})
 }
 
 // GetPublicIP 通过 API 获取公网 IP 地址

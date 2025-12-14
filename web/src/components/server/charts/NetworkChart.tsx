@@ -1,0 +1,154 @@
+import {useEffect, useMemo, useState} from 'react';
+import {Network} from 'lucide-react';
+import {Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
+import {ChartPlaceholder, CustomTooltip} from '@/components/common';
+import {useMetricsQuery, useNetworkInterfacesQuery} from '@/hooks/server/queries';
+import {INTERFACE_COLORS} from '@/constants/server';
+import {ChartContainer} from './ChartContainer';
+
+interface NetworkChartProps {
+    agentId: string;
+    timeRange: string;
+}
+
+/**
+ * 网络流量图表组件
+ * 支持网卡切换
+ */
+export const NetworkChart = ({agentId, timeRange}: NetworkChartProps) => {
+    const [selectedInterface, setSelectedInterface] = useState<string>('all');
+
+    // 查询网卡列表
+    const {data: interfacesData} = useNetworkInterfacesQuery(agentId);
+    const availableInterfaces = interfacesData?.data.interfaces || [];
+
+    // 当网卡列表变化时，验证选中的网卡
+    useEffect(() => {
+        if (selectedInterface !== 'all' && availableInterfaces.length > 0) {
+            if (!availableInterfaces.includes(selectedInterface)) {
+                setSelectedInterface('all');
+            }
+        }
+    }, [availableInterfaces, selectedInterface]);
+
+    // 查询网络数据
+    const {data: metricsResponse, isLoading} = useMetricsQuery({
+        agentId,
+        type: 'network',
+        range: timeRange,
+        interfaceName: selectedInterface !== 'all' ? selectedInterface : undefined,
+    });
+
+    // 数据转换
+    const chartData = useMemo(() => {
+        if (!metricsResponse?.data.series || metricsResponse.data.series?.length === 0) return [];
+
+        const uploadSeries = metricsResponse.data.series?.find(s => s.name === 'upload');
+        const downloadSeries = metricsResponse.data.series?.find(s => s.name === 'download');
+
+        if (!uploadSeries || !downloadSeries) return [];
+
+        const timeMap = new Map<number, any>();
+
+        uploadSeries.data.forEach(point => {
+            const time = new Date(point.timestamp).toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+            timeMap.set(point.timestamp, {
+                time,
+                timestamp: point.timestamp,
+                upload: Number((point.value / 1024 / 1024).toFixed(2)), // 转换为 MB/s
+            });
+        });
+
+        downloadSeries.data.forEach(point => {
+            const existing = timeMap.get(point.timestamp);
+            if (existing) {
+                existing.download = Number((point.value / 1024 / 1024).toFixed(2));
+            }
+        });
+
+        return Array.from(timeMap.values());
+    }, [metricsResponse]);
+
+    // 网卡选择器
+    const interfaceSelector = availableInterfaces.length > 0 && (
+        <select
+            value={selectedInterface}
+            onChange={(e) => setSelectedInterface(e.target.value)}
+            className="rounded-lg border border-cyan-900/50 bg-black/40 px-3 py-1.5 text-xs font-mono text-cyan-300 hover:border-cyan-700 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+        >
+            {availableInterfaces.map((iface) => (
+                <option key={iface} value={iface}>
+                    {iface}
+                </option>
+            ))}
+        </select>
+    );
+
+    // 渲染
+    if (isLoading) {
+        return (
+            <ChartContainer title="网络流量（MB/s）" icon={Network} action={interfaceSelector}>
+                <ChartPlaceholder variant="dark"/>
+            </ChartContainer>
+        );
+    }
+
+    return (
+        <ChartContainer title="网络流量（MB/s）" icon={Network} action={interfaceSelector}>
+            {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={chartData}>
+                        <defs>
+                            <linearGradient id="color-upload" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={INTERFACE_COLORS[0].upload} stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor={INTERFACE_COLORS[0].upload} stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="color-download" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={INTERFACE_COLORS[0].download} stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor={INTERFACE_COLORS[0].download} stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="currentColor" strokeDasharray="4 4" className="stroke-cyan-900/30"/>
+                        <XAxis
+                            dataKey="time"
+                            stroke="currentColor"
+                            className="stroke-cyan-600"
+                            style={{fontSize: '12px'}}
+                        />
+                        <YAxis
+                            stroke="currentColor"
+                            className="stroke-cyan-600"
+                            style={{fontSize: '12px'}}
+                            tickFormatter={(value) => `${value} MB`}
+                        />
+                        <Tooltip content={<CustomTooltip unit=" MB/s" variant="dark"/>}/>
+                        <Legend/>
+                        <Area
+                            type="monotone"
+                            dataKey="upload"
+                            name="上行"
+                            stroke={INTERFACE_COLORS[0].upload}
+                            strokeWidth={2}
+                            fill="url(#color-upload)"
+                            activeDot={{r: 3}}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="download"
+                            name="下行"
+                            stroke={INTERFACE_COLORS[0].download}
+                            strokeWidth={2}
+                            fill="url(#color-download)"
+                            activeDot={{r: 3}}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            ) : (
+                <ChartPlaceholder subtitle="稍后再次尝试刷新网络流量" variant="dark"/>
+            )}
+        </ChartContainer>
+    );
+};

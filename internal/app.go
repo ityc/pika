@@ -81,12 +81,6 @@ func setup(app *orz.App) error {
 	// 启动WebSocket管理器
 	go components.WSManager.Run(ctx)
 
-	// 启动数据清理任务
-	go components.MetricService.StartCleanupTask(ctx)
-
-	// 启动聚合下采样任务
-	go components.MetricService.StartAggregationTask(ctx)
-
 	// 启动指标监控任务（用于告警检测）
 	go startMetricsMonitoring(ctx, components, app.Logger())
 
@@ -95,9 +89,6 @@ func setup(app *orz.App) error {
 	// 将调度器注入到 MonitorService（避免循环依赖）
 	components.MonitorService.SetScheduler(monitorScheduler)
 	monitorScheduler.Start(ctx)
-
-	// 启动监控统计计算任务
-	go startMonitorStatsCalculation(ctx, components, app.Logger())
 
 	// 启动流量重置检查任务(每小时检查一次)
 	go startTrafficResetCheck(ctx, components, app.Logger())
@@ -204,6 +195,7 @@ func setupApi(app *orz.App, components *AppComponents) {
 		publicApiWithOptionalAuth.GET("/monitors/:id/stats", components.MonitorHandler.GetStatsByID)
 		publicApiWithOptionalAuth.GET("/monitors/:id/agents", components.MonitorHandler.GetAgentStatsByID)
 		publicApiWithOptionalAuth.GET("/monitors/:id/history", components.MonitorHandler.GetHistoryByID)
+		publicApiWithOptionalAuth.GET("/monitors/:id", components.MonitorHandler.GetDetail) // 整合版接口
 
 		// Logo（公开访问）- 用于公共页面只获取 Logo
 		publicApiWithOptionalAuth.GET("/logo", components.PropertyHandler.GetLogo)
@@ -303,40 +295,19 @@ func setupApi(app *orz.App, components *AppComponents) {
 func autoMigrate(database *gorm.DB) error {
 	// 自动迁移数据库表
 	return database.AutoMigrate(
-		&models.Agent{},
-		&models.ApiKey{},
-		&models.CPUMetric{},
-		&models.MemoryMetric{},
-		&models.DiskMetric{},
-		&models.NetworkMetric{},
-		&models.NetworkConnectionMetric{},
-		&models.DiskIOMetric{},
-		&models.GPUMetric{},
-		&models.TemperatureMetric{},
-		&models.HostMetric{},
-		&models.AuditResult{},
-		&models.Property{},
-		&models.AlertRecord{},
-		&models.AlertState{},
-		&models.MonitorMetric{},
-		&models.MonitorTask{},
-		&models.MonitorStats{},
-		&models.TamperProtectConfig{},
-		&models.TamperEvent{},
-		&models.TamperAlert{},
-		&models.DDNSConfig{},
-		&models.DDNSRecord{},
-		// 聚合表
-		&models.AggregatedCPUMetricModel{},
-		&models.AggregatedMemoryMetricModel{},
-		&models.AggregatedDiskMetricModel{},
-		&models.AggregatedNetworkMetricModel{},
-		&models.AggregatedNetworkConnectionMetricModel{},
-		&models.AggregatedDiskIOMetricModel{},
-		&models.AggregatedGPUMetricModel{},
-		&models.AggregatedTemperatureMetricModel{},
-		&models.AggregatedMonitorMetricModel{},
-		&models.AggregationProgress{},
+		&models.Agent{},               // 探针
+		&models.ApiKey{},              // ApiKey
+		&models.HostMetric{},          // 保留主机静态信息表
+		&models.AuditResult{},         // 审计历史
+		&models.Property{},            // 系统属性
+		&models.AlertRecord{},         // 告警记录
+		&models.AlertState{},          // 告警状态
+		&models.MonitorTask{},         // 服务监控
+		&models.TamperProtectConfig{}, // 防篡改配置
+		&models.TamperEvent{},         // 防篡改事件
+		&models.TamperAlert{},         // 防篡改告警
+		&models.DDNSConfig{},          // DDNS 配置
+		&models.DDNSRecord{},          // DDNS 记录
 	)
 }
 
@@ -401,9 +372,9 @@ func startMetricsMonitoring(ctx context.Context, components *AppComponents, logg
 
 			for _, agent := range agents {
 				// 获取最新指标
-				latest, err := components.MetricService.GetLatestMetrics(ctx, agent.ID)
-				if err != nil {
-					logger.Debug("获取探针最新指标失败", zap.String("agentId", agent.ID), zap.Error(err))
+				latest, ok := components.MetricService.GetLatestMetrics(agent.ID)
+				if !ok {
+					logger.Debug("获取探针最新指标失败", zap.String("agentId", agent.ID))
 					continue
 				}
 				if latest == nil {
@@ -440,35 +411,6 @@ func startMetricsMonitoring(ctx context.Context, components *AppComponents, logg
 			// 检查监控相关告警（证书和服务下线）
 			if err := components.AlertService.CheckMonitorAlerts(ctx); err != nil {
 				logger.Error("检查监控告警失败", zap.Error(err))
-			}
-		}
-	}
-}
-
-// startMonitorStatsCalculation 启动监控统计计算任务
-func startMonitorStatsCalculation(ctx context.Context, components *AppComponents, logger *zap.Logger) {
-	logger.Info("启动监控统计计算任务")
-
-	ticker := time.NewTicker(5 * time.Minute) // 每5分钟计算一次统计数据
-	defer ticker.Stop()
-
-	// 首次启动时立即计算一次
-	if err := components.MonitorService.CalculateMonitorStats(ctx); err != nil {
-		logger.Error("计算监控统计数据失败", zap.Error(err))
-	} else {
-		logger.Info("监控统计数据计算完成")
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Info("监控统计计算任务已停止")
-			return
-		case <-ticker.C:
-			if err := components.MonitorService.CalculateMonitorStats(ctx); err != nil {
-				logger.Error("计算监控统计数据失败", zap.Error(err))
-			} else {
-				logger.Debug("监控统计数据计算完成")
 			}
 		}
 	}

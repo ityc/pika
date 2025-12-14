@@ -2,10 +2,16 @@ package protocol
 
 import "encoding/json"
 
-// Message WebSocket消息结构
-type Message struct {
+// InputMessage WebSocket消息结构（主要用于接收）
+type InputMessage struct {
 	Type MessageType     `json:"type"`
 	Data json.RawMessage `json:"data"`
+}
+
+// OutboundMessage WebSocket 出站消息结构
+type OutboundMessage struct {
+	Type MessageType `json:"type"`
+	Data interface{} `json:"data"`
 }
 
 // RegisterRequest 注册请求
@@ -31,12 +37,11 @@ type AgentInfo struct {
 	Version  string `json:"version"`  // 版本号
 }
 
-// MetricsWrapper 指标数据包装
-type MetricsWrapper struct {
-	Type MetricType      `json:"type"`
-	Data json.RawMessage `json:"data"`
+// MetricsPayload 指标数据包装，发送端/接收端统一使用
+type MetricsPayload struct {
+	Type MetricType  `json:"type"`
+	Data interface{} `json:"data"`
 }
-
 type MessageType string
 
 // 控制消息
@@ -283,9 +288,11 @@ type Evidence struct {
 
 // MonitorData 监控数据
 type MonitorData struct {
-	ID           string `json:"id"`                     // 监控项ID
+	AgentId      string `json:"agentId"`                // 探针 ID
+	AgentName    string `json:"agentName"`              // 探针名称
+	MonitorId    string `json:"monitorId"`              // 监控项ID
 	Type         string `json:"type"`                   // 监控类型: http, tcp
-	Target       string `json:"target"`                 // 监控目标
+	Target       string `json:"target,omitempty"`       // 监控目标
 	Status       string `json:"status"`                 // 状态: up, down
 	StatusCode   int    `json:"statusCode,omitempty"`   // HTTP 状态码
 	ResponseTime int64  `json:"responseTime"`           // 响应时间(毫秒)

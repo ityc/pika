@@ -402,17 +402,10 @@ func (s *DDNSService) sendDDNSConfigToAgent(config *models.DDNSConfig) error {
 		return err
 	}
 
-	data, err := json.Marshal(configData)
-	if err != nil {
-		return err
-	}
-
-	msg := protocol.Message{
+	msgData, err := json.Marshal(protocol.OutboundMessage{
 		Type: protocol.MessageTypeDDNSConfig,
-		Data: data,
-	}
-
-	msgData, err := json.Marshal(msg)
+		Data: configData,
+	})
 	if err != nil {
 		return err
 	}

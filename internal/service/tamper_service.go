@@ -142,17 +142,10 @@ func (s *TamperService) sendConfigToAgent(agentID string, added, removed []strin
 		Removed: removed,
 	}
 
-	data, err := json.Marshal(configData)
-	if err != nil {
-		return err
-	}
-
-	msg := protocol.Message{
+	msgBytes, err := json.Marshal(protocol.OutboundMessage{
 		Type: protocol.MessageTypeTamperProtect,
-		Data: data,
-	}
-
-	msgBytes, err := json.Marshal(msg)
+		Data: configData,
+	})
 	if err != nil {
 		return err
 	}

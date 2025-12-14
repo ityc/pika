@@ -221,7 +221,7 @@ func (c *Client) ReadPump(ctx context.Context) {
 		c.LastActive = time.Now()
 
 		// 解析消息
-		var msg protocol.Message
+		var msg protocol.InputMessage
 		if err := json.Unmarshal(message, &msg); err != nil {
 			c.Manager.logger.Error("failed to parse message", zap.Error(err), zap.String("agentID", c.ID))
 			continue
