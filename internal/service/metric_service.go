@@ -219,9 +219,11 @@ func (s *MetricService) HandleMetricData(ctx context.Context, agentID string, me
 
 // GetMetrics 获取聚合指标数据（从 VictoriaMetrics 查询）
 // 返回统一的 GetMetricsResponse 格式
-func (s *MetricService) GetMetrics(ctx context.Context, agentID, metricType string, start, end int64, interfaceName string) (*metric.GetMetricsResponse, error) {
+func (s *MetricService) GetMetrics(ctx context.Context, agentID, metricType string, start, end int64, interfaceName string, aggregation string) (*metric.GetMetricsResponse, error) {
+	step := vmclient.AutoStep(time.UnixMilli(start), time.UnixMilli(end))
+
 	// 构造 PromQL 查询（返回多个查询以支持多系列）
-	queries := s.buildPromQLQueries(agentID, metricType, interfaceName)
+	queries := s.buildPromQLQueries(agentID, metricType, interfaceName, aggregation, step)
 	if len(queries) == 0 {
 		return nil, fmt.Errorf("unsupported metric type: %s", metricType)
 	}
@@ -234,7 +236,7 @@ func (s *MetricService) GetMetrics(ctx context.Context, agentID, metricType stri
 		result, err := s.vmClient.QueryRange(ctx, q.Query,
 			time.UnixMilli(start),
 			time.UnixMilli(end),
-			0)
+			step)
 		if err != nil {
 			s.logger.Error("查询 VictoriaMetrics 失败",
 				zap.String("query", q.Query),
@@ -359,7 +361,7 @@ func (s *MetricService) GetAvailableNetworkInterfaces(ctx context.Context, agent
 }
 
 // buildPromQLQueries 构造 PromQL 查询列表（支持多系列）
-func (s *MetricService) buildPromQLQueries(agentID, metricType string, interfaceName string) []metric.QueryDefinition {
+func (s *MetricService) buildPromQLQueries(agentID, metricType string, interfaceName string, aggregation string, step time.Duration) []metric.QueryDefinition {
 	var queries []metric.QueryDefinition
 
 	switch metricType {
@@ -455,7 +457,34 @@ func (s *MetricService) buildPromQLQueries(agentID, metricType string, interface
 		}}
 	}
 
+	if aggregation != "" {
+		for i := range queries {
+			queries[i].Query = wrapAggregationQuery(queries[i].Query, aggregation, step)
+		}
+	}
+
 	return queries
+}
+
+func wrapAggregationQuery(query, aggregation string, step time.Duration) string {
+	if aggregation == "" || step <= 0 {
+		return query
+	}
+
+	windowSeconds := int(step.Seconds())
+	if windowSeconds <= 0 {
+		return query
+	}
+
+	window := fmt.Sprintf("%ds", windowSeconds)
+	switch aggregation {
+	case "avg":
+		return fmt.Sprintf(`avg_over_time((%s)[%s:])`, query, window)
+	case "max":
+		return fmt.Sprintf(`max_over_time((%s)[%s:])`, query, window)
+	default:
+		return query
+	}
 }
 
 // convertQueryResultToSeries 将 VictoriaMetrics 查询结果转换为 MetricSeries

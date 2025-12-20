@@ -9,7 +9,7 @@ const CompactResourceBar = ({value, label, subtext, icon: Icon, color = "bg-cyan
     // 颜色定义 (Hex codes for precise control)
     let activeColor = "";
     let iconClass = "";
-    let textClass = "text-cyan-50"; // 默认高亮白/青
+    let textClass = "dark:text-cyan-50"; // 默认高亮白/青
 
     if (isCritical) {
         activeColor = "#f43f5e"; // Rose
@@ -43,7 +43,7 @@ const CompactResourceBar = ({value, label, subtext, icon: Icon, color = "bg-cyan
                             </div>
 
                             {/* Track Container */}
-                            <div className="w-[100px] h-2 bg-[#121217] relative border border-white/5 overflow-hidden">
+                            <div className="w-[100px] h-2 dark:bg-[#121217] bg-[#e2e8f0] relative border border-white/5 overflow-hidden">
 
                                 {/* Scale Marks Background (The "Ruler" effect) */}
                                 <div

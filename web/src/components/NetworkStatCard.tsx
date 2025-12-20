@@ -1,6 +1,7 @@
 import type {FC} from 'react';
 import {ArrowDown, ArrowUp, Network} from 'lucide-react';
 import {formatBytes, formatSpeed} from '@/utils/util';
+import {cn} from "@/lib/utils.ts";
 
 interface NetworkStatCardProps {
     uploadRate: number;
@@ -16,7 +17,11 @@ const NetworkStatCard: FC<NetworkStatCardProps> = ({
     downloadTotal
 }) => {
     return (
-        <div className="relative overflow-hidden rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 sm:p-5 text-blue-400">
+        <div className={cn(
+            "relative overflow-hidden rounded-xl border p-5",
+            'dark:border-blue-500/30 dark:bg-blue-500/5 dark:text-blue-400',
+            'bg-white/80 backdrop-blur-md border-slate-200 shadow-sm',
+        )}>
             <div className="absolute -right-4 -bottom-4 opacity-10 rotate-[-15deg]">
                 <Network className="w-16 sm:w-24 h-16 sm:h-24"/>
             </div>
@@ -27,23 +32,23 @@ const NetworkStatCard: FC<NetworkStatCardProps> = ({
                     </div>
                     <div className="space-y-0.5 text-xs sm:text-xs font-mono">
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                            <ArrowUp className="w-3 h-3 text-blue-400 flex-shrink-0"/>
-                            <span className="text-cyan-300 truncate">{formatSpeed(uploadRate)}</span>
-                            <span className="text-cyan-500 hidden sm:inline">
+                            <ArrowUp className="w-3 h-3 dark:text-blue-400 text-blue-600 flex-shrink-0"/>
+                            <span className="dark:text-cyan-300 truncate">{formatSpeed(uploadRate)}</span>
+                            <span className="dark:text-cyan-500 text-gray hidden sm:inline">
                                 ({formatBytes(uploadTotal)})
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                            <ArrowDown className="w-3 h-3 text-emerald-400 flex-shrink-0"/>
-                            <span className="text-cyan-300 truncate">{formatSpeed(downloadRate)}</span>
-                            <span className="text-cyan-500 hidden sm:inline">
+                            <ArrowDown className="w-3 h-3 dark:text-emerald-400 text-green-600 flex-shrink-0"/>
+                            <span className="dark:text-cyan-300 truncate">{formatSpeed(downloadRate)}</span>
+                            <span className="dark:text-cyan-500 text-gray-700 hidden sm:inline">
                                 ({formatBytes(downloadTotal)})
                             </span>
                         </div>
                     </div>
                 </div>
-                <div className="p-2 rounded-lg bg-black/20 backdrop-blur-sm border border-white/5 flex-shrink-0">
-                    <Network className="w-4 sm:w-5 h-4 sm:h-5"/>
+                <div className="p-3">
+                    <Network className="w-6 h-6"/>
                 </div>
             </div>
         </div>

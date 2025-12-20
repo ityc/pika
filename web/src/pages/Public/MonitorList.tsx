@@ -1,18 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
-import {Link, useNavigate} from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
-import {
-    AlertCircle, AlertTriangle,
-    BarChart3,
-    CheckCircle2,
-    Clock,
-    Globe,
-    Loader2,
-    Maximize2,
-    Search,
-    Server,
-    Shield, Zap
-} from 'lucide-react';
+import {AlertTriangle, BarChart3, CheckCircle2, Globe, Loader2, Maximize2, Search, Shield, Zap} from 'lucide-react';
 import {getPublicMonitors} from '@/api/monitor.ts';
 import type {PublicMonitor} from '@/types';
 import {cn} from '@/lib/utils';
@@ -46,7 +35,6 @@ interface Stats {
 }
 
 const MonitorList = () => {
-    const navigate = useNavigate();
     const [filter, setFilter] = useState<FilterStatus>('all');
     const [searchKeyword, setSearchKeyword] = useState('');
     const [displayMode, setDisplayMode] = useState<DisplayMode>('max');

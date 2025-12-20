@@ -31,7 +31,7 @@ interface AgentWithMetrics extends Agent {
 }
 
 const LoadingSpinner = () => (
-    <div className="flex min-h-screen items-center justify-center bg-[#05050a]">
+    <div className="flex min-h-screen items-center justify-center bg-[#f0f2f5] dark:bg-[#05050a]">
         <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-cyan-500"/>
             <p className="text-sm text-cyan-500 font-mono">数据加载中...</p>
@@ -47,12 +47,12 @@ interface EmptyStateProps {
 
 const EmptyState = ({title, description, extra}: EmptyStateProps) => (
     <div
-        className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-cyan-500/30 bg-[#0a0b10]/90 p-12 text-center backdrop-blur">
+        className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-cyan-500/30 bg-white/90 dark:bg-[#0a0b10]/90 p-12 text-center backdrop-blur">
         <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-500">
             <HardDrive className="h-7 w-7"/>
         </div>
-        <h3 className="mt-4 text-base font-semibold text-cyan-100 font-mono">{title}</h3>
-        <p className="mt-2 max-w-sm text-sm text-cyan-500">{description}</p>
+        <h3 className="mt-4 text-base font-semibold text-slate-800 dark:text-cyan-100 font-mono">{title}</h3>
+        <p className="mt-2 max-w-sm text-sm text-slate-600 dark:text-cyan-500">{description}</p>
         {extra ? <div className="mt-4">{extra}</div> : null}
     </div>
 );
@@ -201,8 +201,8 @@ const ServerList = () => {
             {allTags.length > 1 && (
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
                     <div
-                        className="text-sm sm:text-xs font-mono text-cyan-500 flex items-center gap-1.5 sm:gap-2 mr-1 sm:mr-2">
-                        <Filter className="w-3 h-3"/>
+                        className="text-sm sm:text-xs font-mono text-gray-700 dark:text-cyan-500 flex items-center gap-1.5 sm:gap-2 mr-1 sm:mr-2 font-bold">
+                        <Filter className="w-4 h-4"/>
                         <span className="hidden sm:inline">FILTERS:</span>
                     </div>
                     {allTags.map(tag => {
@@ -220,10 +220,10 @@ const ServerList = () => {
                                 key={tag}
                                 onClick={() => setSelectedTag(tagKey)}
                                 className={cn(
-                                    "px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider transition-all border cursor-pointer",
+                                    "px-4 py-1.5 rounded-full text-xs font-bold font-mono tracking-wider transition-all border cursor-pointer uppercase",
                                     selectedTag === tagKey
-                                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.3)]'
-                                        : 'bg-black/30 text-cyan-500 border-cyan-900/30 hover:text-cyan-500 hover:border-cyan-700'
+                                        ? 'bg-gray-100 dark:bg-cyan-500 dark:text-white border-gray-600 dark:border-cyan-600 shadow-md'
+                                        : 'bg-transparent text-slate-600 dark:text-cyan-500 border-slate-200 dark:border-cyan-900/30 hover:bg-gray-100 hover:border-cyan-900/30 dark:hover:text-cyan-500 dark:hover:border-cyan-500'
                                 )}
                             >
                                 {tag} ({count})
@@ -243,18 +243,18 @@ const ServerList = () => {
                 <>
                     {/* 桌面端表格布局 */}
                     <div
-                        className="hidden md:block bg-[#0a0b10]/90 border border-cyan-900/50 rounded-md overflow-hidden shadow-2xl backdrop-blur-sm">
+                        className="hidden md:block bg-white/80 dark:bg-[#0a0b10]/90 border border-slate-200 dark:border-cyan-900/50 rounded-xl overflow-hidden shadow-sm dark:shadow-2xl backdrop-blur-md">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                            <tr className="bg-black/40 text-sm font-mono uppercase tracking-widest text-cyan-500 border-b border-cyan-900/50">
-                                <th className="p-4 font-normal w-[300px]">System Identity</th>
-                                <th className="p-4 font-normal">Resource Telemetry</th>
-                                <th className="p-4 font-normal w-[200px]">Network I/O</th>
-                                <th className="p-4 font-normal w-[150px]">Connections</th>
-                                <th className="p-4 font-normal w-[180px]">Meta / Tags</th>
+                            <tr className="bg-slate-50 dark:bg-black/40 text-xs font-mono uppercase tracking-widest text-slate-400 dark:text-cyan-500 border-b border-slate-200 dark:border-cyan-900/50 font-bold">
+                                <th className="p-5 font-bold w-[250px]">Identity</th>
+                                <th className="p-5 font-bold">Telemetry</th>
+                                <th className="p-5 font-bold w-[220px]">I/O Rate</th>
+                                <th className="p-5 font-bold w-[150px]">Status</th>
+                                <th className="p-5 font-bold w-[200px]">Meta / Tags</th>
                             </tr>
                             </thead>
-                            <tbody className="divide-y divide-cyan-900/30">
+                            <tbody className="divide-y divide-slate-100 dark:divide-cyan-900/20">
                             {displayAgents.map(server => {
                                 const isOnline = server.status === 1;
                                 const cpuUsage = server.metrics?.cpu?.usagePercent ?? 0;
@@ -279,29 +279,29 @@ const ServerList = () => {
                                                 handleNavigate(server.id);
                                             }
                                         }}
-                                        className="group hover:bg-cyan-500/5 transition-colors cursor-pointer"
+                                        className="group hover:bg-gray-500/5 dark:hover:bg-cyan-500/5 transition-colors cursor-pointer"
                                     >
                                         {/* Identity */}
                                         <td className="p-4 align-top">
                                             <div className="flex items-center gap-4">
                                                 <div className="space-y-1">
                                                     <div
-                                                        className="font-bold text-cyan-100 font-mono text-sm transition-colors">
-                                                        {server.name || server.hostname}
+                                                        className="font-bold text-slate-800 dark:text-cyan-100 font-mono text-sm transition-colors">
+                                                        {server.name}
                                                     </div>
                                                     <div
-                                                        className="flex items-center gap-2 text-xs text-cyan-400 mt-1 font-mono uppercase">
+                                                        className="flex items-center gap-2 text-xs text-gray-600 dark:text-cyan-400 mt-1 font-mono uppercase">
                                                         <span>{server.os}</span>
-                                                        <span className="w-px h-2 bg-cyan-800"></span>
+                                                        <span className="w-px h-2 bg-gray-400 dark:bg-cyan-800"></span>
                                                         <span>{server.arch}</span>
                                                     </div>
                                                     {isOnline && server.metrics?.host && (
                                                         <div className="flex items-center gap-3 text-xs font-mono mt-1">
-                                                            <div className="flex items-center gap-1 text-cyan-600">
+                                                            <div className="flex items-center gap-1 text-gray-500 dark:text-cyan-600">
                                                                 <Clock className="w-3 h-3"/>
                                                                 <span>{formatUptime(server.metrics.host.uptime)}</span>
                                                             </div>
-                                                            <div className="flex items-center gap-1 text-cyan-600">
+                                                            <div className="flex items-center gap-1 text-gray-500 dark:text-cyan-600">
                                                                 <Activity className="w-3 h-3"/>
                                                                 <span>{server.metrics.host.procs} 进程</span>
                                                             </div>
@@ -344,7 +344,7 @@ const ServerList = () => {
                                                                 <span key={index} className="flex items-center gap-1">
                                                                     <span
                                                                         className="text-orange-400">{temp.temperature?.toFixed(1)}°C</span>
-                                                                    <span className="text-cyan-500">{temp.type}</span>
+                                                                    <span className="text-gray-500 dark:text-cyan-500">{temp.type}</span>
                                                                     {index < temperatures.length - 1 &&
                                                                         <span className="text-cyan-900">|</span>}
                                                                 </span>
@@ -363,12 +363,12 @@ const ServerList = () => {
 
                                         {/* Network */}
                                         <td className="p-4 font-mono text-xs align-top">
-                                            <div className="flex flex-col gap-1.5 text-cyan-500 mb-1.5">
-                                                <span className="flex items-center gap-2 text-emerald-400/80">
+                                            <div className="flex flex-col gap-1.5 mb-1.5">
+                                                <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400/80">
                                                     <ArrowDown className="w-3 h-3"/>
                                                     <span>{formatSpeed(download)}</span>
                                                 </span>
-                                                <span className="flex items-center gap-2 text-blue-400/80">
+                                                <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400/80">
                                                     <ArrowUp className="w-3 h-3"/>
                                                     <span>{formatSpeed(upload)}</span>
                                                 </span>
@@ -376,12 +376,12 @@ const ServerList = () => {
                                             {server.trafficLimit > 0 && (
                                                 <div className="w-32 text-xs">
                                                     <div
-                                                        className="flex justify-between text-cyan-500 mb-0.5">
+                                                        className="flex justify-between text-gray-600 dark:text-cyan-500 mb-0.5">
                                                         <span className={''}>流量使用</span>
                                                         <span>{Math.round((server.trafficUsed || 0) / server.trafficLimit * 100)}%</span>
                                                     </div>
-                                                    <div className="h-1 bg-cyan-900/50 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-cyan-400"
+                                                    <div className="h-1 bg-slate-200 dark:bg-cyan-900/50 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-gray-500 dark:bg-cyan-400"
                                                              style={{width: `${((server.trafficUsed || 0) / server.trafficLimit) * 100}%`}}></div>
                                                     </div>
                                                 </div>
@@ -393,24 +393,24 @@ const ServerList = () => {
                                             {isOnline && netConn ? (
                                                 <div className="flex flex-col gap-1.5">
                                                     <div className="flex items-center gap-2">
-                                                        <Network className="w-3 h-3 text-emerald-400"/>
+                                                        <Network className="w-3 h-3 text-emerald-600 dark:text-emerald-400"/>
                                                         <span
-                                                            className="text-emerald-400">{netConn.established || 0}</span>
-                                                        <span className="text-cyan-500">已建立</span>
+                                                            className="text-emerald-600 dark:text-emerald-400">{netConn.established || 0}</span>
+                                                        <span className="text-gray-600 dark:text-cyan-500">已建立</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Network className="w-3 h-3 text-blue-400"/>
-                                                        <span className="text-blue-400">{netConn.listen || 0}</span>
-                                                        <span className="text-cyan-500">监听中</span>
+                                                        <Network className="w-3 h-3 text-blue-600 dark:text-blue-400"/>
+                                                        <span className="text-blue-600 dark:text-blue-400">{netConn.listen || 0}</span>
+                                                        <span className="text-gray-600 dark:text-cyan-500">监听中</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Network className="w-3 h-3 text-rose-400"/>
-                                                        <span className="text-rose-400">{netConn.closeWait || 0}</span>
-                                                        <span className="text-cyan-500">等待关闭</span>
+                                                        <Network className="w-3 h-3 text-rose-600 dark:text-rose-400"/>
+                                                        <span className="text-rose-600 dark:text-rose-400">{netConn.closeWait || 0}</span>
+                                                        <span className="text-gray-600 dark:text-cyan-500">等待关闭</span>
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="text-cyan-500">-</div>
+                                                <div className="text-gray-600 dark:text-cyan-500">-</div>
                                             )}
                                         </td>
 
@@ -420,13 +420,13 @@ const ServerList = () => {
                                                 <div className="flex gap-1 flex-wrap">
                                                     {server.tags && server.tags.length > 0 && server.tags.map(tag => (
                                                         <span key={tag}
-                                                              className="px-1.5 py-0.5 bg-cyan-900/40 text-cyan-500 border border-cyan-700/50 text-xs font-mono rounded-sm">
+                                                              className="px-1.5 py-0.5 bg-gray-100 dark:bg-cyan-900/40 text-gray-700 dark:text-cyan-500 border border-gray-300 dark:border-cyan-700/50 text-xs font-mono rounded-sm">
                                                             #{tag}
                                                         </span>
                                                     ))}
                                                 </div>
                                                 <div
-                                                    className={`text-xs font-mono flex items-center gap-1 ${server.expireTime && server.expireTime > 0 ? 'text-cyan-500' : 'text-emerald-400/80'}`}>
+                                                    className={`text-xs font-mono flex items-center gap-1 ${server.expireTime && server.expireTime > 0 ? 'text-cyan-600 dark:text-cyan-500' : 'text-emerald-600 dark:text-emerald-400/80'}`}>
 
                                                     {server.expireTime > 0 &&
                                                         <div className={'flex items-center gap-1'}>

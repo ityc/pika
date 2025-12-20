@@ -11,6 +11,7 @@ export interface GetAgentMetricsRequest {
     type: 'cpu' | 'memory' | 'disk' | 'network' | 'network_connection' | 'disk_io' | 'gpu' | 'temperature' | 'monitor';
     range?: string; // 时间范围，如 '15m', '1h', '1d' 等，从后端配置获取
     interface?: string; // 网卡过滤参数（仅对 network 类型有效）
+    aggregation?: 'avg' | 'max'; // 聚合方式：均值或峰值
 }
 
 // 新的统一数据格式
@@ -65,12 +66,15 @@ export const getAgentForAdmin = (id: string) => {
 };
 
 export const getAgentMetrics = (params: GetAgentMetricsRequest) => {
-    const {agentId, type, range = '1h', interface: interfaceName} = params;
+    const {agentId, type, range = '1h', interface: interfaceName, aggregation} = params;
     const query = new URLSearchParams();
     query.append('type', type);
     query.append('range', range);
     if (interfaceName) {
         query.append('interface', interfaceName);
+    }
+    if (aggregation) {
+        query.append('aggregation', aggregation);
     }
     return get<GetAgentMetricsResponse>(`/agents/${agentId}/metrics?${query.toString()}`);
 };

@@ -1,13 +1,37 @@
 import {useEffect, useState} from 'react';
-import {Activity, LogIn, Menu, ServerIcon, Settings, X} from 'lucide-react';
+import {Activity, LogIn, Menu, ServerIcon, Settings, X, Sun, Moon, Monitor} from 'lucide-react';
 import {getCurrentUser} from '../api/auth';
 import {Link, useLocation} from "react-router-dom";
+import {useTheme, type Theme} from '../contexts/ThemeContext';
 
 const PublicHeader = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const {theme, setTheme} = useTheme();
     let location = useLocation();
+
+    // 主题切换函数
+    const cycleTheme = () => {
+        const themes: Theme[] = ['light', 'dark', 'auto'];
+        const currentIndex = themes.indexOf(theme);
+        const nextIndex = (currentIndex + 1) % themes.length;
+        setTheme(themes[nextIndex]);
+    };
+
+    // 获取当前主题图标
+    const getThemeIcon = () => {
+        switch (theme) {
+            case 'light':
+                return Sun;
+            case 'dark':
+                return Moon;
+            case 'auto':
+                return Monitor;
+        }
+    };
+
+    const ThemeIcon = getThemeIcon();
 
     useEffect(() => {
         // 检查本地是否有 token
@@ -60,7 +84,7 @@ const PublicHeader = () => {
 
     return (
         <>
-            <header className="border-b border-cyan-900/50 bg-[#05050a]/80 backdrop-blur-xl fixed top-0 left-0 right-0 z-40">
+            <header className="border-b border-slate-200 dark:border-cyan-900/50 bg-white/80 dark:bg-[#05050a]/80 backdrop-blur-xl fixed top-0 left-0 right-0 z-40 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <Link to={'/'}>
@@ -76,10 +100,10 @@ const PublicHeader = () => {
                                     />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 uppercase italic">
-                                        {leftName}<span className="text-white">{rightName}</span>
+                                    <h1 className="text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 dark:from-cyan-400 dark:via-blue-400 dark:to-purple-400 uppercase italic">
+                                        {leftName}<span className="text-slate-800 dark:text-white">{rightName}</span>
                                     </h1>
-                                    <p className="text-xstext-cyan-500 font-mono tracking-[0.3em] uppercase">
+                                    <p className="text-xs text-slate-500 dark:text-cyan-500 font-mono tracking-[0.3em] uppercase">
                                         {window.SystemConfig?.SystemNameZh}
                                     </p>
                                 </div>
@@ -95,12 +119,12 @@ const PublicHeader = () => {
                                 <Link to={tab.to} key={tab.id}>
                                     <button
                                         className={`
-                          relative group flex items-center gap-2 py-2 text-xs font-bold tracking-widest transition-colors cursor-pointer
-                          ${activeTab === tab.id ? 'text-cyan-500' : 'text-slate-400 hover:text-cyan-200'}
+                          relative group flex items-center gap-2 py-2 text-xs font-bold tracking-widest transition-colors cursor-pointer font-mono uppercase
+                          ${activeTab === tab.id ? 'text-cyan-500' : 'text-slate-500 dark:text-slate-400 hover:text-cyan-500 dark:hover:text-cyan-200'}
                         `}
                                     >
                                         <tab.icon
-                                            className={`w-4 h-4 ${activeTab === tab.id ? 'text-cyan-500' : 'text-slate-600 group-hover:text-cyan-200'}`}/>
+                                            className={`w-4 h-4 ${activeTab === tab.id ? 'text-cyan-500' : 'text-slate-400 dark:text-slate-600 group-hover:text-cyan-500 dark:group-hover:text-cyan-200'}`}/>
                                         {tab.label}
 
                                         {/* Active Indicator (Underline Glow) */}
@@ -115,17 +139,27 @@ const PublicHeader = () => {
                     {/* Desktop Right Section */}
                     <div className="hidden md:flex items-center gap-6">
                         <div className="hidden lg:flex flex-col items-end">
-                            <span className="text-xs font-mono text-cyan-500">{currentTime.toLocaleTimeString()}</span>
+                            <span className="text-xs font-mono text-slate-800 dark:text-cyan-500 font-bold">{currentTime.toLocaleTimeString()}</span>
                             <span
-                                className="text-xs text-cyan-500 font-mono tracking-widest">{currentTime.toLocaleDateString()}</span>
+                                className="text-xs text-slate-500 dark:text-cyan-500 font-mono tracking-widest">{currentTime.toLocaleDateString()}</span>
                         </div>
-                        <div className="h-8 w-[1px] bg-cyan-900/50 hidden lg:block"></div>
+                        <div className="h-6 w-[1px] bg-slate-300 dark:bg-cyan-900/50 hidden lg:block"></div>
+
+                        {/* 主题切换按钮 - Desktop */}
+                        <button
+                            onClick={cycleTheme}
+                            className="flex items-center gap-2 px-3 py-2 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/50 text-cyan-500 rounded transition-all text-xs font-bold tracking-wider uppercase group"
+                            title={`当前主题: ${theme === 'light' ? '亮色' : theme === 'dark' ? '暗色' : '自动'}`}
+                        >
+                            <ThemeIcon className="w-3 h-3 group-hover:rotate-12 transition-transform"/>
+                            <span className="hidden xl:inline">{theme === 'light' ? '亮色' : theme === 'dark' ? '暗色' : '自动'}</span>
+                        </button>
 
                         {/* 登录/管理后台按钮 - Desktop */}
                         {isLoggedIn ? (
                             <a
                                 href="/admin"
-                                className="flex items-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-500 rounded transition-all text-xs font-bold tracking-wider uppercase group"
+                                className="flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/50 text-cyan-500 rounded transition-all text-xs font-bold tracking-wider uppercase group"
                                 target="_blank"
                             >
                                 <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform"/>
@@ -134,7 +168,7 @@ const PublicHeader = () => {
                         ) : (
                             <a
                                 href="/login"
-                                className="flex items-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-500 rounded transition-all text-xs font-bold tracking-wider uppercase group"
+                                className="flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/50 text-cyan-500 rounded transition-all text-xs font-bold tracking-wider uppercase group"
                                 target="_blank"
                             >
                                 <LogIn className="w-3 h-3"/>
@@ -156,13 +190,13 @@ const PublicHeader = () => {
                         )}
                     </button>
                 </div>
-                <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
+                <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"></div>
             </header>
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
                 <div
-                    className="md:hidden fixed inset-0 top-20 bg-[#05050a]/95 backdrop-blur-xl z-30 animate-in slide-in-from-top">
+                    className="md:hidden fixed inset-0 top-20 bg-white/95 dark:bg-[#05050a]/95 backdrop-blur-xl z-30 animate-in slide-in-from-top">
                     <div className="flex flex-col p-4 gap-4">
                         {/* Mobile Navigation */}
                         {[
@@ -177,7 +211,7 @@ const PublicHeader = () => {
                                     flex items-center gap-3 p-4 rounded-lg border transition-all
                                     ${activeTab === tab.id
                                     ? 'bg-cyan-500/20 border-cyan-500/80 text-cyan-500'
-                                    : 'bg-cyan-500/5 border-cyan-500/30 text-slate-400 hover:bg-cyan-500/10 hover:border-cyan-500/30'
+                                    : 'bg-cyan-500/5 border-slate-200 dark:border-cyan-500/30 text-slate-600 dark:text-slate-400 hover:bg-cyan-500/10 hover:border-cyan-500/50'
                                 }
                                 `}
                             >
@@ -187,14 +221,23 @@ const PublicHeader = () => {
                         ))}
 
                         {/* Divider */}
-                        <div className="h-[1px] bg-cyan-900/50 my-2"></div>
+                        <div className="h-[1px] bg-slate-200 dark:bg-cyan-900/50 my-2"></div>
+
+                        {/* Mobile Theme Toggle Button */}
+                        <button
+                            onClick={cycleTheme}
+                            className="flex items-center justify-center gap-3 p-4 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/50 text-cyan-500 rounded-lg transition-all font-bold tracking-wider uppercase"
+                        >
+                            <ThemeIcon className="w-5 h-5"/>
+                            <span>主题: {theme === 'light' ? '亮色' : theme === 'dark' ? '暗色' : '自动'}</span>
+                        </button>
 
                         {/* Mobile Login/Admin Button */}
                         {isLoggedIn ? (
                             <a
                                 href="/admin"
                                 target="_blank"
-                                className="flex items-center justify-center gap-3 p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-500 rounded-lg transition-all font-bold tracking-wider uppercase"
+                                className="flex items-center justify-center gap-3 p-4 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/50 text-cyan-500 rounded-lg transition-all font-bold tracking-wider uppercase"
                             >
                                 <Settings className="w-5 h-5"/>
                                 <span>管理后台</span>
@@ -203,7 +246,7 @@ const PublicHeader = () => {
                             <a
                                 href="/login"
                                 target="_blank"
-                                className="flex items-center justify-center gap-3 p-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-500 rounded-lg transition-all font-bold tracking-wider uppercase"
+                                className="flex items-center justify-center gap-3 p-4 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/50 text-cyan-500 rounded-lg transition-all font-bold tracking-wider uppercase"
                             >
                                 <LogIn className="w-5 h-5"/>
                                 <span>登录</span>

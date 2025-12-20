@@ -404,6 +404,16 @@ func (h *AgentHandler) GetMetrics(c echo.Context) error {
 	if interfaceName == "" {
 		interfaceName = "all"
 	}
+	aggregation := strings.ToLower(strings.TrimSpace(c.QueryParam("aggregation")))
+	switch aggregation {
+	case "", "avg":
+	case "mean":
+		aggregation = "avg"
+	case "max", "peak":
+		aggregation = "max"
+	default:
+		return orz.NewError(400, "无效的聚合方式")
+	}
 
 	// 验证指标类型
 	validTypes := map[string]bool{
@@ -424,7 +434,7 @@ func (h *AgentHandler) GetMetrics(c echo.Context) error {
 	}
 
 	// GetMetrics 内部会自动计算最优聚合间隔
-	metrics, err := h.metricService.GetMetrics(ctx, agentID, metricType, start, end, interfaceName)
+	metrics, err := h.metricService.GetMetrics(ctx, agentID, metricType, start, end, interfaceName, aggregation)
 	if err != nil {
 		return err
 	}

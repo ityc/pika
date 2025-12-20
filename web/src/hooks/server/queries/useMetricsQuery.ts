@@ -6,6 +6,7 @@ interface UseMetricsQueryOptions {
     type: GetAgentMetricsRequest['type'];
     range: string;
     interfaceName?: string;
+    aggregation?: GetAgentMetricsRequest['aggregation'];
 }
 
 /**
@@ -13,15 +14,16 @@ interface UseMetricsQueryOptions {
  * @param options 查询选项
  * @returns 历史指标查询结果
  */
-export const useMetricsQuery = ({agentId, type, range, interfaceName}: UseMetricsQueryOptions) => {
+export const useMetricsQuery = ({agentId, type, range, interfaceName, aggregation}: UseMetricsQueryOptions) => {
     return useQuery({
-        queryKey: ['agent', agentId, 'metrics', type, range, interfaceName],
+        queryKey: ['agent', agentId, 'metrics', type, range, interfaceName, aggregation],
         queryFn: () =>
             getAgentMetrics({
                 agentId,
                 type,
                 range,
                 interface: interfaceName,
+                aggregation,
             }),
         enabled: !!agentId,
         // refetchInterval: 30000, // 30秒自动刷新

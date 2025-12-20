@@ -14,17 +14,26 @@ interface Props {
 const StatBlock = ({title, value, unit, icon: Icon, color, alert, glow}: Props) => {
 
     const colorMap = {
-        cyan: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/5',
-        emerald: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/5',
-        rose: 'text-rose-400 border-rose-500/30 bg-rose-500/5',
-        purple: 'text-purple-400 border-purple-500/30 bg-purple-500/5'
+        cyan: 'dark:text-cyan-400 dark:border-cyan-500/30 dark:bg-cyan-500/5',
+        emerald: 'dark:text-emerald-400 dark:border-emerald-500/30 dark:bg-emerald-500/5',
+        rose: 'dark:text-rose-400 dark:border-rose-500/30 dark:bg-rose-500/5',
+        purple: 'dark:text-purple-400 dark:border-purple-500/30 dark:bg-purple-500/5'
     };
     const style = colorMap[color] || colorMap.cyan;
+
+    const iconColor = {
+        cyan: 'text-cyan-400',
+        emerald: 'text-emerald-400',
+        rose: 'text-rose-400',
+        purple: 'text-purple-400'
+    }
+    let iconStyle = iconColor[color] || colorMap.cyan;
 
     return (
         <div
             className={cn(
                 `relative overflow-hidden rounded-xl border p-5`,
+                'bg-white/80 backdrop-blur-md border border-slate-200 shadow-sm',
                 style,
                 alert && 'animate-pulse bg-rose-500/10',
                 glow && 'shadow-[0_0_20px_rgba(16,185,129,0.1)]',
@@ -36,8 +45,9 @@ const StatBlock = ({title, value, unit, icon: Icon, color, alert, glow}: Props) 
                     <div className="text-4xl font-black tracking-tight flex items-baseline gap-1">{value}{unit &&
                         <span className="text-sm font-normal opacity-60 ml-1">{unit}</span>}</div>
                 </div>
-                <div className={`p-3 rounded-lg bg-black/20 backdrop-blur-sm border border-white/5`}><Icon
-                    className="w-6 h-6"/></div>
+                <div className={`p-3`}>
+                    <Icon className={cn("w-6 h-6", iconStyle)}/>
+                </div>
             </div>
         </div>
     );
