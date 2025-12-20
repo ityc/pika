@@ -52,7 +52,7 @@ export const MonitorChart = ({agentId, timeRange, aggregation}: MonitorChartProp
 
         // 转换为数组并排序
         return Array.from(timestampMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-    }, [metricsResponse, timeRange]);
+    }, [metricsResponse, timeRange, aggregation]);
 
     // 获取所有监控任务的列表（使用名称）
     const monitorKeys = useMemo(() => {

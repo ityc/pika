@@ -52,7 +52,7 @@ export const GpuChart = ({agentId, timeRange, aggregation}: GpuChartProps) => {
         });
 
         return Array.from(timeMap.values());
-    }, [metricsResponse, timeRange]);
+    }, [metricsResponse, timeRange, aggregation]);
 
     // 渲染
     if (isLoading) {

@@ -89,7 +89,7 @@ export const ResponseTimeChart = ({monitorId, monitorStats}: ResponseTimeChartPr
 
         // 按时间戳排序
         return Object.values(grouped).sort((a, b) => a.timestamp - b.timestamp);
-    }, [historyData, selectedAgent, timeRange]);
+    }, [historyData, selectedAgent, timeRange, aggregation]);
 
     const visibleMonitorStats = useMemo(() => {
         return monitorStats.filter(stat => selectedAgent === 'all' || stat.agentId === selectedAgent);

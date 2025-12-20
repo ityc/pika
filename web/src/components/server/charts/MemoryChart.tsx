@@ -33,7 +33,7 @@ export const MemoryChart = ({agentId, timeRange, aggregation}: MemoryChartProps)
             usage: Number(point.value.toFixed(2)),
             timestamp: point.timestamp,
         }));
-    }, [metricsResponse, timeRange]);
+    }, [metricsResponse, timeRange, aggregation]);
 
     // 渲染
     if (isLoading) {

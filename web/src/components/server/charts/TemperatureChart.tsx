@@ -48,7 +48,7 @@ export const TemperatureChart = ({agentId, timeRange, aggregation}: TemperatureC
         });
 
         return Array.from(timeMap.values());
-    }, [metricsResponse, timeRange]);
+    }, [metricsResponse, timeRange, aggregation]);
 
     // 提取所有唯一的温度类型
     const temperatureTypes = useMemo(() => {

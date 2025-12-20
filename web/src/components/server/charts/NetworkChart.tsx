@@ -68,7 +68,7 @@ export const NetworkChart = ({agentId, timeRange, aggregation}: NetworkChartProp
         });
 
         return Array.from(timeMap.values());
-    }, [metricsResponse, timeRange]);
+    }, [metricsResponse, timeRange, aggregation]);
 
     // 网卡选择器
     const interfaceSelector = availableInterfaces.length > 0 && (

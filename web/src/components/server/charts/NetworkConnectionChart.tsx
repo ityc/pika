@@ -51,7 +51,7 @@ export const NetworkConnectionChart = ({agentId, timeRange, aggregation}: Networ
         });
 
         return Array.from(timeMap.values()).sort((a, b) => a.timestamp - b.timestamp);
-    }, [metricsResponse, timeRange]);
+    }, [metricsResponse, timeRange, aggregation]);
 
     // 渲染
     if (isLoading) {
