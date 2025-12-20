@@ -290,18 +290,18 @@ const ServerList = () => {
                                                         {server.name || server.hostname}
                                                     </div>
                                                     <div
-                                                        className="flex items-center gap-2 text-xs text-cyan-500 mt-1 font-mono uppercase">
+                                                        className="flex items-center gap-2 text-xs text-cyan-400 mt-1 font-mono uppercase">
                                                         <span>{server.os}</span>
                                                         <span className="w-px h-2 bg-cyan-800"></span>
                                                         <span>{server.arch}</span>
                                                     </div>
                                                     {isOnline && server.metrics?.host && (
                                                         <div className="flex items-center gap-3 text-xs font-mono mt-1">
-                                                            <div className="flex items-center gap-1 text-cyan-500">
+                                                            <div className="flex items-center gap-1 text-cyan-600">
                                                                 <Clock className="w-3 h-3"/>
                                                                 <span>{formatUptime(server.metrics.host.uptime)}</span>
                                                             </div>
-                                                            <div className="flex items-center gap-1 text-cyan-500">
+                                                            <div className="flex items-center gap-1 text-cyan-600">
                                                                 <Activity className="w-3 h-3"/>
                                                                 <span>{server.metrics.host.procs} 进程</span>
                                                             </div>

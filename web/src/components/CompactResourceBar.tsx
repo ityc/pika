@@ -1,4 +1,5 @@
 import * as Tooltip from '@radix-ui/react-tooltip';
+import {cn} from "@/lib/utils.ts";
 
 // 紧凑型资源条组件
 const CompactResourceBar = ({value, label, subtext, icon: Icon, color = "bg-cyan-500"}) => {
@@ -8,22 +9,25 @@ const CompactResourceBar = ({value, label, subtext, icon: Icon, color = "bg-cyan
     // 颜色定义 (Hex codes for precise control)
     let activeColor = "";
     let iconClass = "";
+    let textClass = "text-cyan-50"; // 默认高亮白/青
 
     if (isCritical) {
         activeColor = "#f43f5e"; // Rose
-        iconClass = "text-rose-500";
+        iconClass = "text-rose-400";
+        textClass = "text-rose-400 drop-shadow-[0_0_3px_rgba(244,63,94,0.5)]";
     } else if (isWarning) {
         activeColor = "#f59e0b"; // Amber
-        iconClass = "text-amber-500";
+        iconClass = "text-amber-400";
+        textClass = "text-amber-400";
     } else if (color.includes("purple")) {
         activeColor = "#a855f7"; // Purple
-        iconClass = "text-purple-500";
+        iconClass = "text-purple-400";
     } else if (color.includes("blue")) {
         activeColor = "#3b82f6"; // Blue
-        iconClass = "text-blue-500";
+        iconClass = "text-blue-400";
     } else {
         activeColor = "#06b6d4"; // Cyan (Default)
-        iconClass = "text-cyan-500";
+        iconClass = "text-cyan-400";
     }
 
     return (
@@ -67,7 +71,7 @@ const CompactResourceBar = ({value, label, subtext, icon: Icon, color = "bg-cyan
                                 </div>
                             </div>
                             <div
-                                className={`w-10 font-medium text-xs cursor-pointer ${isCritical ? 'text-rose-400' : 'text-slate-200'}`}>
+                                className={cn(`w-10 font-medium text-xs cursor-pointer`, textClass)}>
                                 {value.toFixed(1)}%
                             </div>
                         </div>
